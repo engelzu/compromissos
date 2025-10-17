@@ -285,5 +285,5 @@ function exportToCSV() {
   link.click();
 }
 
-export { currentFilter, searchTerm, updateTable, initApp };
+export { currentFilter, searchTerm, updateTable };
 

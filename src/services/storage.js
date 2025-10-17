@@ -18,6 +18,7 @@ function fromSupabase(supabaseObj) {
         tema: supabaseObj.tema,
         acao: supabaseObj.acao,
         responsavel: supabaseObj.responsavel,
+        status: supabaseObj.status, // Adicionado
     };
 }
 
@@ -32,6 +33,7 @@ function toSupabase(jsObj) {
         tema: jsObj.tema,
         acao: jsObj.acao,
         responsavel: jsObj.responsavel,
+        status: jsObj.status, // Adicionado
     };
 }
 
@@ -43,19 +45,20 @@ export async function initializeData() {
 
     if (error) {
         console.error("Erro ao buscar compromissos:", error);
+        compromissosStore = [];
     } else {
         compromissosStore = data.map(fromSupabase);
     }
     
-    const { data: areasData, error: areasError } = await supabase.from('areas').select('*').order('name');
+    const { data: areasData, error: areasError } = await supabase.from('areas').select('*');
     if (areasError) console.error('Erro ao buscar áreas:', areasError);
     else areasStore = areasData;
 
-    const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*').order('name');
+    const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*');
     if (reunioesError) console.error('Erro ao buscar reuniões:', reunioesError);
     else reunioesStore = reunioesData;
 
-    const { data: responsaveisData, error: responsaveisError } = await supabase.from('responsaveis').select('*').order('name');
+    const { data: responsaveisData, error: responsaveisError } = await supabase.from('responsaveis').select('*');
     if (responsaveisError) console.error('Erro ao buscar responsáveis:', responsaveisError);
     else responsaveisStore = responsaveisData;
 }
@@ -69,16 +72,21 @@ export function getAreas() {
 }
 
 export function getReunioes() {
-    return reunioesStore.map(r => r.name);
+    return [...reunioesStore];
 }
 
 export function getResponsaveis() {
-    return responsaveisStore.map(r => r.name);
+    return [...responsaveisStore];
 }
 
 
 export async function saveCompromisso(compromisso) {
-    const supabaseCompromisso = toSupabase(compromisso);
+    // Adiciona o status padrão se não for fornecido
+    const compromissoComStatus = {
+        ...compromisso,
+        status: compromisso.status || 'Não Iniciada'
+    };
+    const supabaseCompromisso = toSupabase(compromissoComStatus);
 
     const { data, error } = await supabase
         .from('compromissos')

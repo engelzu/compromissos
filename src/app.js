@@ -1,16 +1,54 @@
-import { areas } from './data/areas.js';
-import { getCompromissos, deleteCompromisso, initializeData } from './services/storage.js';
+import { getCompromissos, deleteCompromisso, initializeData, getAreas, getReunioes } from './services/storage.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
 import { openModal } from './components/modal.js';
+import { renderAdminPage } from './components/admin.js';
 
 let currentFilter = 'TODOS';
 let searchTerm = '';
+let isAdmin = false;
 
 export async function initApp() {
+  renderLoginScreen();
+}
+
+function renderLoginScreen() {
   const app = document.getElementById('app');
-  
+  app.innerHTML = `
+    <div class="min-h-screen flex items-center justify-center bg-gray-100">
+      <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Acesso Restrito</h2>
+        <form id="login-form">
+          <div class="mb-4">
+            <label for="password" class="block text-gray-700 text-sm font-medium mb-2">Senha de Administrador</label>
+            <input type="password" id="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="********">
+          </div>
+          <p id="error-message" class="text-red-500 text-sm mb-4 text-center hidden"></p>
+          <button type="submit" class="w-full btn-primary justify-center">Entrar</button>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const password = e.target.password.value;
+    const errorMessage = document.getElementById('error-message');
+
+    if (password === '789512') {
+      isAdmin = true;
+      loadMainApp();
+    } else {
+      errorMessage.textContent = 'Senha incorreta. Tente novamente.';
+      errorMessage.classList.remove('hidden');
+      e.target.password.value = '';
+    }
+  });
+}
+
+async function loadMainApp() {
+  const app = document.getElementById('app');
   app.innerHTML = `
     <div class="min-h-screen flex items-center justify-center bg-gray-50">
       <div class="text-center">
@@ -18,13 +56,12 @@ export async function initApp() {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <p class="text-lg font-medium text-gray-700">Conectando ao banco de dados...</p>
+        <p class="text-lg font-medium text-gray-700">Carregando dados...</p>
       </div>
     </div>
   `;
 
   await initializeData();
-  
   renderApp();
   setupEventListeners();
 }
@@ -35,11 +72,11 @@ function renderApp() {
     <div class="min-h-screen flex flex-col lg:flex-row bg-gray-50">
       <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
       <aside id="sidebar" class="w-80 bg-gray-100 border-r border-gray-200 fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-auto">
-        ${renderSidebar(areas, currentFilter)}
+        ${renderSidebar(getAreas(), currentFilter)}
       </aside>
 
       <div class="flex-1 flex flex-col overflow-hidden">
-        ${renderHeader()}
+        ${renderHeader(isAdmin)}
         <main class="flex-1 overflow-y-auto">
           <div class="p-4 lg:p-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -59,7 +96,7 @@ function renderApp() {
               </div>
             </div>
             <div id="table-container">
-              ${renderTable(getCompromissos(), currentFilter, searchTerm)}
+              ${renderTable(getCompromissos(), currentFilter, searchTerm, isAdmin)}
             </div>
           </div>
         </main>
@@ -104,6 +141,12 @@ function setupEventListeners() {
     openModal(null, () => updateTable());
   });
 
+  if (isAdmin) {
+    document.getElementById('btn-admin')?.addEventListener('click', () => {
+        renderAdminPage();
+    });
+  }
+
   document.getElementById('btn-export')?.addEventListener('click', exportToCSV);
   
   document.body.addEventListener('click', async function(e) {
@@ -131,19 +174,59 @@ function setupEventListeners() {
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
       const id = deleteBtn.dataset.id;
-      if (confirm('Tem certeza que deseja excluir este compromisso?')) {
+      showConfirmModal('Tem certeza que deseja excluir este compromisso?', async () => {
         await deleteCompromisso(id);
         updateTable();
-      }
+      });
       return;
     }
   });
 }
 
+function showConfirmModal(message, onConfirm) {
+  const modalContainer = document.getElementById('modal-container');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay" id="confirm-overlay">
+      <div class="modal-content max-w-sm">
+        <div class="p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">${message}</h3>
+          <div class="flex gap-3 mt-6">
+            <button type="button" id="confirm-cancel-btn" class="flex-1 btn-secondary justify-center">
+              Cancelar
+            </button>
+            <button type="button" id="confirm-ok-btn" class="flex-1 btn-primary justify-center bg-red-600 hover:bg-red-700">
+              Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('confirm-overlay');
+  const cancelBtn = document.getElementById('confirm-cancel-btn');
+  const okBtn = document.getElementById('confirm-ok-btn');
+
+  const closeModal = () => {
+    modalContainer.innerHTML = '';
+  };
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  
+  cancelBtn.addEventListener('click', closeModal);
+
+  okBtn.addEventListener('click', () => {
+    onConfirm();
+    closeModal();
+  });
+}
+
 function updateTable() {
   const compromissos = getCompromissos();
-  document.getElementById('table-container').innerHTML = renderTable(compromissos, currentFilter, searchTerm);
-  document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
+  document.getElementById('table-container').innerHTML = renderTable(compromissos, currentFilter, searchTerm, isAdmin);
+  document.getElementById('sidebar').innerHTML = renderSidebar(getAreas(), currentFilter);
 }
 
 function exportToCSV() {
@@ -174,4 +257,3 @@ function formatDate(dateString) {
   return `${day}/${month}/${year}`;
 }
 
-export { currentFilter, searchTerm, updateTable };

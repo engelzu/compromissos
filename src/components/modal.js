@@ -1,12 +1,13 @@
-import { areas } from '../data/areas.js';
-import { nomeReunioes } from '../data/reunioes.js';
+import { getAreas, getReunioes, getResponsaveis } from '../services/storage.js';
 import { saveCompromisso, updateCompromisso } from '../services/storage.js';
 
 export function openModal(compromisso = null, onSave) {
   const isEdit = !!compromisso;
   const modalContainer = document.getElementById('modal-container');
 
-  const areasWithoutTodos = areas.filter(c => c.name !== 'TODOS');
+  const areas = getAreas().filter(c => c.name !== 'TODOS');
+  const nomeReunioes = getReunioes();
+  const responsaveis = getResponsaveis();
 
   modalContainer.innerHTML = `
     <div class="modal-overlay" id="modal-overlay">
@@ -41,7 +42,7 @@ export function openModal(compromisso = null, onSave) {
               <label class="block text-sm font-medium text-gray-700 mb-2">Área</label>
               <select name="categoria" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                 <option value="">Selecione...</option>
-                ${areasWithoutTodos.map(area => `
+                ${areas.map(area => `
                   <option value="${area.name}" ${compromisso?.categoria === area.name ? 'selected' : ''}>${area.name}</option>
                 `).join('')}
               </select>
@@ -104,14 +105,12 @@ export function openModal(compromisso = null, onSave) {
 
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">Responsável</label>
-              <input 
-                type="text" 
-                name="responsavel" 
-                required
-                value="${compromisso?.responsavel || ''}"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Nome do responsável"
-              />
+              <select name="responsavel" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                <option value="">Selecione...</option>
+                ${responsaveis.map(responsavel => `
+                  <option value="${responsavel}" ${compromisso?.responsavel === responsavel ? 'selected' : ''}>${responsavel}</option>
+                `).join('')}
+              </select>
             </div>
           </div>
 
@@ -168,3 +167,4 @@ export function openModal(compromisso = null, onSave) {
     onSave();
   });
 }
+

@@ -1,4 +1,4 @@
-import { getPriorityIcon, getStatusColor, formatDate } from '../utils/helpers.js';
+import { getPriorityIcon, getStatusColor, formatDate, getStatusBadge } from '../utils/helpers.js';
 
 export function renderTable(compromissos, filter, search) {
   let filtered = compromissos;
@@ -12,7 +12,8 @@ export function renderTable(compromissos, filter, search) {
       (c.nomeReuniao && c.nomeReuniao.toLowerCase().includes(search.toLowerCase())) ||
       (c.tema && c.tema.toLowerCase().includes(search.toLowerCase())) ||
       (c.responsavel && c.responsavel.toLowerCase().includes(search.toLowerCase())) ||
-      (c.acao && c.acao.toLowerCase().includes(search.toLowerCase()))
+      (c.acao && c.acao.toLowerCase().includes(search.toLowerCase())) ||
+      (c.status && c.status.toLowerCase().includes(search.toLowerCase()))
     );
   }
 
@@ -42,6 +43,7 @@ export function renderTable(compromissos, filter, search) {
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ação</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Responsável</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Data Prazo</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
             </tr>
           </thead>
@@ -55,10 +57,7 @@ export function renderTable(compromissos, filter, search) {
                 <td class="px-4 py-3"><div class="text-sm text-gray-600">${c.acao}</div></td>
                 <td class="px-4 py-3 whitespace-nowrap">
                   <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    </div>
-                    <span class="text-sm font-medium text-green-700">${c.responsavel}</span>
+                    <span class="text-sm font-medium text-gray-800">${c.responsavel}</span>
                   </div>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap">
@@ -67,6 +66,7 @@ export function renderTable(compromissos, filter, search) {
                     <span class="text-sm font-medium ${getStatusColor(c.dataPrazo, true)}">${formatDate(c.dataPrazo)}</span>
                   </div>
                 </td>
+                <td class="px-4 py-3 whitespace-nowrap">${getStatusBadge(c.status)}</td>
                 <td class="px-4 py-3 whitespace-nowrap">
                   <div class="flex gap-2">
                     <button class="btn-edit p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" data-id="${c.id}" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
@@ -91,6 +91,7 @@ export function renderTable(compromissos, filter, search) {
             </div>
             
             <div class="text-sm text-gray-600 space-y-2">
+                <p>${getStatusBadge(c.status)}</p>
               <p><strong class="font-medium text-gray-800">Ação:</strong> ${c.acao}</p>
               <p><strong class="font-medium text-gray-800">Responsável:</strong> ${c.responsavel}</p>
             </div>
@@ -120,3 +121,4 @@ export function renderTable(compromissos, filter, search) {
     </div>
   `;
 }
+

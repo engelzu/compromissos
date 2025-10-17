@@ -1,4 +1,4 @@
-import { getCompromissos, getAreas, initializeData, deleteCompromisso } from './services/storage.js';
+import { getCompromissos, deleteCompromisso, initializeData, getAreas, getReunioes, getResponsaveis } from './services/storage.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
@@ -7,7 +7,6 @@ import { renderAdminPage } from './components/admin.js';
 
 let currentFilter = 'TODOS';
 let searchTerm = '';
-let areas = [];
 
 export async function initApp() {
   const app = document.getElementById('app');
@@ -19,24 +18,24 @@ export async function initApp() {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <p class="text-lg font-medium text-gray-700">A carregar dados...</p>
+        <p class="text-lg font-medium text-gray-700">Carregando dados...</p>
       </div>
     </div>
   `;
 
   await initializeData();
-  areas = getAreas();
-  renderMainApp();
+  
+  renderApp();
   setupEventListeners();
 }
 
-function renderMainApp() {
+function renderApp() {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="min-h-screen flex flex-col lg:flex-row bg-gray-50">
       <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
       <aside id="sidebar" class="w-80 bg-gray-100 border-r border-gray-200 fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-auto">
-        ${renderSidebar(areas, currentFilter)}
+        ${renderSidebar(getAreas(), currentFilter)}
       </aside>
 
       <div class="flex-1 flex flex-col overflow-hidden">
@@ -68,10 +67,9 @@ function renderMainApp() {
 }
 
 function setupEventListeners() {
-  document.body.addEventListener('click', handleBodyClick);
-
   const sidebar = document.getElementById('sidebar');
   const sidebarOverlay = document.getElementById('sidebar-overlay');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
   
   const closeSidebar = () => {
     sidebar?.classList.add('-translate-x-full');
@@ -83,7 +81,7 @@ function setupEventListeners() {
     sidebarOverlay?.classList.remove('hidden');
   };
 
-  document.getElementById('sidebar-toggle')?.addEventListener('click', (e) => {
+  sidebarToggle?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (sidebar?.classList.contains('-translate-x-full')) {
       openSidebar();
@@ -98,11 +96,18 @@ function setupEventListeners() {
     searchTerm = e.target.value;
     updateTable();
   });
-  
-  document.getElementById('btn-export')?.addEventListener('click', exportToCSV);
-}
 
-async function handleBodyClick(e) {
+  document.getElementById('btn-add')?.addEventListener('click', () => {
+    openModal(null, () => updateTable());
+  });
+  
+  document.getElementById('btn-admin-panel')?.addEventListener('click', () => {
+    showAdminPasswordPrompt();
+  });
+
+  document.getElementById('btn-export')?.addEventListener('click', exportToCSV);
+  
+  document.body.addEventListener('click', async function(e) {
     const sidebarItem = e.target.closest('.sidebar-item');
     if (sidebarItem) {
       const area = sidebarItem.dataset.area;
@@ -111,138 +116,164 @@ async function handleBodyClick(e) {
         updateTable();
       }
       if (window.innerWidth < 1024) {
-        document.getElementById('sidebar')?.classList.add('-translate-x-full');
-        document.getElementById('sidebar-overlay')?.classList.add('hidden');
+        closeSidebar();
       }
       return;
-    }
-
-    const adminBtn = e.target.closest('#btn-admin-panel');
-    if (adminBtn) {
-        openAdminLogin();
-        return;
-    }
-
-    const addBtn = e.target.closest('#btn-add');
-    if (addBtn) {
-        openModal(null, updateTable);
-        return;
     }
 
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
       const id = editBtn.dataset.id;
       const compromisso = getCompromissos().find(c => c.id === id);
-      openModal(compromisso, updateTable);
+      openModal(compromisso, () => updateTable());
       return;
     }
 
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
       const id = deleteBtn.dataset.id;
-      showConfirmationModal('Tem certeza que deseja excluir este compromisso?', async () => {
-        await deleteCompromisso(id);
-        updateTable();
+      // Novo: Pede a senha antes de excluir
+      showDeletePasswordPrompt(async () => {
+          await deleteCompromisso(id);
+          updateTable();
+          showCustomAlert('Item excluído com sucesso!');
       });
       return;
     }
+  });
 }
 
-
-function updateTable() {
-  document.getElementById('table-container').innerHTML = renderTable(getCompromissos(), currentFilter, searchTerm);
-  document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
-}
-
-function openAdminLogin() {
+// Função para pedir a senha para exclusão
+function showDeletePasswordPrompt(onSuccess) {
     const modalHTML = `
-    <div id="admin-login-modal" class="modal-overlay">
-      <div class="modal-content max-w-sm">
-        <form id="admin-login-form" class="p-6">
-          <h3 class="text-xl font-bold mb-4">Acesso Administrador</h3>
-          <div class="mb-4">
-            <label for="admin-password" class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-            <input type="password" id="admin-password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-          </div>
-          <p id="admin-error" class="text-red-500 text-sm mb-4 hidden"></p>
-          <div class="flex justify-end gap-3">
-            <button type="button" id="admin-cancel-btn" class="btn-secondary">Cancelar</button>
-            <button type="submit" class="btn-primary">Entrar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="modal-overlay" id="password-modal-overlay">
+            <div class="modal-content max-w-sm">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold mb-4">Confirmação Necessária</h3>
+                    <p class="text-sm text-gray-600 mb-4">Para excluir este item, por favor, insira a senha de administrador.</p>
+                    <form id="password-form">
+                        <input type="password" id="password-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Senha" required>
+                        <div id="password-error" class="text-red-500 text-sm mt-2 hidden">Senha incorreta.</div>
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button type="button" id="password-cancel-btn" class="btn-secondary">Cancelar</button>
+                            <button type="submit" class="btn-primary">Confirmar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    const modal = document.getElementById('admin-login-modal');
-    const form = document.getElementById('admin-login-form');
-    const cancelBtn = document.getElementById('admin-cancel-btn');
-    const errorP = document.getElementById('admin-error');
+    const overlay = document.getElementById('password-modal-overlay');
+    const form = document.getElementById('password-form');
+    const cancelBtn = document.getElementById('password-cancel-btn');
+    const passwordInput = document.getElementById('password-input');
+    const errorDiv = document.getElementById('password-error');
 
-    const closeModal = () => modal.remove();
-    
+    const closeModal = () => overlay.remove();
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     cancelBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+    passwordInput.focus();
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const password = form.elements.password.value;
-        if (password === "789512") {
+        const password = passwordInput.value;
+        if (password === '789512') {
+            onSuccess();
             closeModal();
-            document.body.removeEventListener('click', handleBodyClick);
-            renderAdminPage();
         } else {
-            errorP.textContent = "Senha incorreta.";
-            errorP.classList.remove('hidden');
+            errorDiv.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordInput.focus();
         }
     });
 }
 
-function showConfirmationModal(message, onConfirm) {
-  const modalHTML = `
-    <div id="confirmation-modal" class="modal-overlay">
-      <div class="modal-content max-w-sm">
-        <div class="p-6">
-          <p class="text-gray-800 mb-6">${message}</p>
-          <div class="flex justify-end gap-3">
-            <button id="confirm-cancel" class="btn-secondary">Cancelar</button>
-            <button id="confirm-ok" class="btn-primary bg-red-600 hover:bg-red-700">Confirmar</button>
-          </div>
+// Função para pedir a senha para o painel de admin
+function showAdminPasswordPrompt() {
+    const modalHTML = `
+        <div class="modal-overlay" id="admin-password-modal-overlay">
+            <div class="modal-content max-w-sm">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold mb-4">Acesso ao Painel Admin</h3>
+                     <p class="text-sm text-gray-600 mb-4">Insira a senha para gerir as tabelas.</p>
+                    <form id="admin-password-form">
+                        <input type="password" id="admin-password-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Senha" required>
+                        <div id="admin-password-error" class="text-red-500 text-sm mt-2 hidden">Senha incorreta.</div>
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button type="button" id="admin-password-cancel-btn" class="btn-secondary">Cancelar</button>
+                            <button type="submit" class="btn-primary">Aceder</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-  const modal = document.getElementById('confirmation-modal');
-  const cancelBtn = document.getElementById('confirm-cancel');
-  const okBtn = document.getElementById('confirm-ok');
+    const overlay = document.getElementById('admin-password-modal-overlay');
+    const form = document.getElementById('admin-password-form');
+    const cancelBtn = document.getElementById('admin-password-cancel-btn');
+    const passwordInput = document.getElementById('admin-password-input');
+    const errorDiv = document.getElementById('admin-password-error');
 
-  const closeModal = () => modal.remove();
+    const closeModal = () => overlay.remove();
 
-  cancelBtn.addEventListener('click', closeModal);
-  okBtn.addEventListener('click', () => {
-    onConfirm();
-    closeModal();
-  });
-   modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-  });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    cancelBtn.addEventListener('click', closeModal);
+    passwordInput.focus();
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const password = passwordInput.value;
+        if (password === '789512') {
+            closeModal();
+            renderAdminPage();
+        } else {
+            errorDiv.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    });
 }
 
+function showCustomAlert(message) {
+    const alertHTML = `
+        <div id="custom-alert" class="fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg animate-pulse">
+            ${message}
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', alertHTML);
+    setTimeout(() => {
+        document.getElementById('custom-alert')?.remove();
+    }, 3000);
+}
+
+function updateTable() {
+  const compromissos = getCompromissos();
+  document.getElementById('table-container').innerHTML = renderTable(compromissos, currentFilter, searchTerm);
+  document.getElementById('sidebar').innerHTML = renderSidebar(getAreas(), currentFilter);
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+}
 
 function exportToCSV() {
   const compromissos = getCompromissos();
   const headers = ['Prioridade', 'Nome da Reunião', 'Data Registro', 'Tema', 'Ação', 'Responsável', 'Data Prazo', 'Área'];
   const rows = compromissos.map(c => [
     c.prioridade,
-    `"${c.nomeReuniao.replace(/"/g, '""')}"`,
-    c.dataRegistro,
-    `"${c.tema.replace(/"/g, '""')}"`,
-    `"${c.acao.replace(/"/g, '""')}"`,
+    `"${c.nomeReuniao ? c.nomeReuniao.replace(/"/g, '""') : ''}"`,
+    formatDate(c.dataRegistro),
+    `"${c.tema ? c.tema.replace(/"/g, '""') : ''}"`,
+    `"${c.acao ? c.acao.replace(/"/g, '""') : ''}"`,
     c.responsavel,
-    c.dataPrazo,
+    formatDate(c.dataPrazo),
     c.categoria
   ].join(','));
 
@@ -253,4 +284,6 @@ function exportToCSV() {
   link.download = 'compromissos.csv';
   link.click();
 }
+
+export { currentFilter, searchTerm, updateTable, initApp };
 

@@ -132,6 +132,7 @@ function setupEventListeners() {
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
       const id = deleteBtn.dataset.id;
+      // Corrigido: Chama a função que pede a senha.
       showDeletePasswordPrompt(async () => {
           await deleteCompromisso(id);
           updateTable();

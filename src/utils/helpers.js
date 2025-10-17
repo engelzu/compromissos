@@ -20,6 +20,10 @@ export function getPriorityIcon(priority) {
 export function getStatusColor(dataPrazo, isText = false) {
   const today = new Date();
   const prazo = new Date(dataPrazo);
+  // Reset time part to compare only dates
+  today.setHours(0, 0, 0, 0);
+  prazo.setHours(0, 0, 0, 0);
+  
   const diffDays = Math.ceil((prazo - today) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) {
@@ -31,8 +35,25 @@ export function getStatusColor(dataPrazo, isText = false) {
   }
 }
 
+// Novo: Função para obter o badge de status
+export function getStatusBadge(status) {
+    const statusConfig = {
+        'Não Iniciada': 'bg-red-100 text-red-800',
+        'Em Andamento': 'bg-blue-100 text-blue-800',
+        'Concluída': 'bg-green-100 text-green-800',
+    };
+    const config = statusConfig[status] || 'bg-gray-100 text-gray-800';
+    return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${config}">${status}</span>`;
+}
+
+
 export function formatDate(dateString) {
   if (!dateString) return '';
-  const [year, month, day] = dateString.split('-');
-  return `${day}/${month}/${year}`;
+  // Handles both YYYY-MM-DD and DD/MM/YYYY
+  if (dateString.includes('-')) {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return dateString;
 }
+

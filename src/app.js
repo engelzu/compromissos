@@ -259,13 +259,17 @@ function updateTable() {
 
 function formatDate(dateString) {
   if (!dateString) return '';
-  const [year, month, day] = dateString.split('-');
-  return `${day}/${month}/${year}`;
+  // Handles both YYYY-MM-DD and DD/MM/YYYY
+  if (dateString.includes('-')) {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return dateString;
 }
 
 function exportToCSV() {
   const compromissos = getCompromissos();
-  const headers = ['Prioridade', 'Nome da Reunião', 'Data Registro', 'Tema', 'Ação', 'Responsável', 'Data Prazo', 'Área'];
+  const headers = ['Prioridade', 'Nome da Reunião', 'Data Registro', 'Tema', 'Ação', 'Responsável', 'Data Prazo', 'Área', 'Status'];
   const rows = compromissos.map(c => [
     c.prioridade,
     `"${c.nomeReuniao ? c.nomeReuniao.replace(/"/g, '""') : ''}"`,
@@ -274,7 +278,8 @@ function exportToCSV() {
     `"${c.acao ? c.acao.replace(/"/g, '""') : ''}"`,
     c.responsavel,
     formatDate(c.dataPrazo),
-    c.categoria
+    c.categoria,
+    c.status || 'Não Iniciada' // Garante que o status seja incluído
   ].join(','));
 
   const csvContent = [headers.join(','), ...rows].join('\n');

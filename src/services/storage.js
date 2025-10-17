@@ -3,6 +3,7 @@ import { supabase } from './supabase.js';
 let compromissosStore = [];
 let areasStore = [];
 let reunioesStore = [];
+let responsaveisStore = [];
 
 function fromSupabase(supabaseObj) {
     if (!supabaseObj) return null;
@@ -42,18 +43,21 @@ export async function initializeData() {
 
     if (error) {
         console.error("Erro ao buscar compromissos:", error);
-        compromissosStore = [];
     } else {
         compromissosStore = data.map(fromSupabase);
     }
     
-    const { data: areasData, error: areasError } = await supabase.from('areas').select('*');
+    const { data: areasData, error: areasError } = await supabase.from('areas').select('*').order('name');
     if (areasError) console.error('Erro ao buscar áreas:', areasError);
     else areasStore = areasData;
 
-    const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*');
+    const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*').order('name');
     if (reunioesError) console.error('Erro ao buscar reuniões:', reunioesError);
     else reunioesStore = reunioesData;
+
+    const { data: responsaveisData, error: responsaveisError } = await supabase.from('responsaveis').select('*').order('name');
+    if (responsaveisError) console.error('Erro ao buscar responsáveis:', responsaveisError);
+    else responsaveisStore = responsaveisData;
 }
 
 export function getCompromissos() {
@@ -65,7 +69,11 @@ export function getAreas() {
 }
 
 export function getReunioes() {
-    return [...reunioesStore];
+    return reunioesStore.map(r => r.name);
+}
+
+export function getResponsaveis() {
+    return responsaveisStore.map(r => r.name);
 }
 
 

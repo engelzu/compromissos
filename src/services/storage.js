@@ -1,14 +1,9 @@
 import { supabase } from './supabase.js';
 
-let compromissosStore = []; // Armazenamento em memória para acesso rápido
+let compromissosStore = [];
+let areasStore = [];
+let reunioesStore = [];
 
-// --- Mappers para conversão de nomes de colunas ---
-
-/**
- * Converte um objeto do Supabase (snake_case) para um objeto JS (camelCase).
- * @param {object} supabaseObj O objeto vindo do banco de dados.
- * @returns {object} O objeto convertido para uso no JavaScript.
- */
 function fromSupabase(supabaseObj) {
     if (!supabaseObj) return null;
     return {
@@ -25,11 +20,6 @@ function fromSupabase(supabaseObj) {
     };
 }
 
-/**
- * Converte um objeto JS (camelCase) para um objeto do Supabase (snake_case).
- * @param {object} jsObj O objeto do JavaScript.
- * @returns {object} O objeto convertido para ser salvo no banco de dados.
- */
 function toSupabase(jsObj) {
     if (!jsObj) return null;
     return {
@@ -44,10 +34,6 @@ function toSupabase(jsObj) {
     };
 }
 
-
-// --- Funções CRUD ---
-
-// Busca os dados iniciais do Supabase
 export async function initializeData() {
     const { data, error } = await supabase
         .from('compromissos')
@@ -55,16 +41,33 @@ export async function initializeData() {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Erro ao buscar dados do Supabase:", error);
+        console.error("Erro ao buscar compromissos:", error);
         compromissosStore = [];
     } else {
         compromissosStore = data.map(fromSupabase);
     }
+    
+    const { data: areasData, error: areasError } = await supabase.from('areas').select('*');
+    if (areasError) console.error('Erro ao buscar áreas:', areasError);
+    else areasStore = areasData;
+
+    const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*');
+    if (reunioesError) console.error('Erro ao buscar reuniões:', reunioesError);
+    else reunioesStore = reunioesData;
 }
 
 export function getCompromissos() {
     return [...compromissosStore];
 }
+
+export function getAreas() {
+    return [{ name: 'TODOS', icon: '📋' }, ...areasStore];
+}
+
+export function getReunioes() {
+    return [...reunioesStore];
+}
+
 
 export async function saveCompromisso(compromisso) {
     const supabaseCompromisso = toSupabase(compromisso);
@@ -77,12 +80,6 @@ export async function saveCompromisso(compromisso) {
     
     if (error) {
         console.error("Erro detalhado ao salvar compromisso:", error);
-        if (error.message.includes("column") && error.message.includes("does not exist")) {
-            console.error("--- AÇÃO NECESSÁRIA ---");
-            console.error("DICA: Este erro indica uma divergência entre o código e o banco de dados. O nome de uma coluna no código (ex: 'data_prazo') não foi encontrado na sua tabela do Supabase.");
-            console.error("Por favor, execute o script SQL para renomear as colunas no seu editor SQL do Supabase para o formato 'snake_case'.");
-            console.error("-----------------------");
-        }
         throw error;
     }
 
@@ -103,12 +100,6 @@ export async function updateCompromisso(id, updates) {
     
     if (error) {
         console.error("Erro detalhado ao atualizar compromisso:", error);
-        if (error.message.includes("column") && error.message.includes("does not exist")) {
-            console.error("--- AÇÃO NECESSÁRIA ---");
-            console.error("DICA: Este erro indica uma divergência entre o código e o banco de dados. O nome de uma coluna no código (ex: 'data_prazo') não foi encontrado na sua tabela do Supabase.");
-            console.error("Por favor, execute o script SQL para renomear as colunas no seu editor SQL do Supabase para o formato 'snake_case'.");
-            console.error("-----------------------");
-        }
         throw error;
     }
 
@@ -132,3 +123,4 @@ export async function deleteCompromisso(id) {
     
     compromissosStore = compromissosStore.filter(c => c.id !== id);
 }
+

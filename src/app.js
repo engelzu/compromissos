@@ -132,7 +132,6 @@ function setupEventListeners() {
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
       const id = deleteBtn.dataset.id;
-      // Novo: Pede a senha antes de excluir
       showDeletePasswordPrompt(async () => {
           await deleteCompromisso(id);
           updateTable();

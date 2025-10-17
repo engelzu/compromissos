@@ -6,7 +6,7 @@ export function openModal(compromisso = null, onSave) {
   const modalContainer = document.getElementById('modal-container');
 
   const areas = getAreas().filter(c => c.name !== 'TODOS');
-  const nomeReunioes = getReunioes();
+  const reunioes = getReunioes();
   const responsaveis = getResponsaveis();
 
   modalContainer.innerHTML = `
@@ -52,10 +52,29 @@ export function openModal(compromisso = null, onSave) {
               <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Reunião</label>
               <select name="nomeReuniao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                 <option value="">Selecione...</option>
-                ${nomeReunioes.map(reuniao => `
-                  <option value="${reuniao}" ${compromisso?.nomeReuniao === reuniao ? 'selected' : ''}>${reuniao}</option>
+                ${reunioes.map(reuniao => `
+                  <option value="${reuniao.name}" ${compromisso?.nomeReuniao === reuniao.name ? 'selected' : ''}>${reuniao.name}</option>
                 `).join('')}
               </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Responsável</label>
+              <select name="responsavel" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                <option value="">Selecione...</option>
+                ${responsaveis.map(resp => `
+                  <option value="${resp.name}" ${compromisso?.responsavel === resp.name ? 'selected' : ''}>${resp.name}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select name="status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="Não Iniciada" ${(!compromisso || compromisso.status === 'Não Iniciada') ? 'selected' : ''}>Não Iniciada</option>
+                    <option value="Em Andamento" ${compromisso?.status === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
+                    <option value="Concluída" ${compromisso?.status === 'Concluída' ? 'selected' : ''}>Concluída</option>
+                </select>
             </div>
 
             <div>
@@ -64,7 +83,7 @@ export function openModal(compromisso = null, onSave) {
                 type="date" 
                 name="dataRegistro" 
                 required
-                value="${compromisso?.dataRegistro || ''}"
+                value="${compromisso?.dataRegistro || new Date().toISOString().split('T')[0]}"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -101,16 +120,6 @@ export function openModal(compromisso = null, onSave) {
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                 placeholder="Descreva a ação necessária..."
               >${compromisso?.acao || ''}</textarea>
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Responsável</label>
-              <select name="responsavel" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                <option value="">Selecione...</option>
-                ${responsaveis.map(responsavel => `
-                  <option value="${responsavel}" ${compromisso?.responsavel === responsavel ? 'selected' : ''}>${responsavel}</option>
-                `).join('')}
-              </select>
             </div>
           </div>
 
@@ -155,6 +164,7 @@ export function openModal(compromisso = null, onSave) {
       tema: formData.get('tema'),
       acao: formData.get('acao'),
       responsavel: formData.get('responsavel'),
+      status: formData.get('status'), // Adicionado
     };
 
     if (isEdit) {

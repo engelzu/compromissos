@@ -38,12 +38,11 @@ function toSupabase(jsObj) {
 }
 
 export async function initializeData() {
-    // Aumentamos o limite para garantir que carregue todos os 1000+
     const { data, error } = await supabase
         .from('compromissos')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(2000); 
+        .limit(3000); // Aumentei o limite para garantir
 
     if (error) {
         console.error("Erro ao buscar compromissos:", error);
@@ -72,7 +71,6 @@ export async function saveCompromisso(compromisso) {
     const supabaseCompromisso = toSupabase(compromissoComStatus);
 
     const { data, error } = await supabase.from('compromissos').insert([supabaseCompromisso]).select().single();
-    
     if (error) throw error;
 
     const newCompromisso = fromSupabase(data);
@@ -80,25 +78,13 @@ export async function saveCompromisso(compromisso) {
     return newCompromisso;
 }
 
-// --- NOVA FUNÇÃO PARA SALVAR EM LOTE ---
 export async function saveCompromissosBulk(listaCompromissos) {
     if (!listaCompromissos || listaCompromissos.length === 0) return;
-
-    // Prepara os dados convertendo para o formato do banco
-    const dadosParaSalvar = listaCompromissos.map(c => ({
-        ...toSupabase(c),
-        status: c.status || 'Não Iniciada'
-    }));
-
-    // Envia para o Supabase
-    const { data, error } = await supabase
-        .from('compromissos')
-        .insert(dadosParaSalvar)
-        .select();
-
+    const dadosParaSalvar = listaCompromissos.map(c => ({ ...toSupabase(c), status: c.status || 'Não Iniciada' }));
+    
+    const { data, error } = await supabase.from('compromissos').insert(dadosParaSalvar).select();
     if (error) throw error;
 
-    // Atualiza a lista local com os novos dados retornados do banco
     const novos = data.map(fromSupabase);
     compromissosStore.unshift(...novos);
     return novos;
@@ -118,4 +104,54 @@ export async function deleteCompromisso(id) {
     const { error } = await supabase.from('compromissos').delete().eq('id', id);
     if (error) throw error;
     compromissosStore = compromissosStore.filter(c => c.id !== id);
+}
+
+// --- NOVA FUNÇÃO: HIGIENIZAR DADOS (TRIM) ---
+export async function sanitizeDatabase(onProgress) {
+    // 1. Pega tudo do banco direto
+    const { data: todos, error } = await supabase.from('compromissos').select('*');
+    if (error) throw error;
+
+    let corrigidos = 0;
+    const total = todos.length;
+
+    // 2. Percorre um por um verificando espaços
+    for (let i = 0; i < total; i++) {
+        const item = todos[i];
+        
+        // Verifica se tem espaços extras nas pontas
+        const nomeLimpo = item.nome_reuniao ? item.nome_reuniao.trim() : null;
+        const respLimpo = item.responsavel ? item.responsavel.trim() : null;
+        const temaLimpo = item.tema ? item.tema.trim() : null;
+        const catLimpo  = item.categoria ? item.categoria.trim() : null;
+        const statusLimpo = item.status ? item.status.trim() : null;
+
+        // Se algo mudou, atualiza no banco
+        if (
+            (item.nome_reuniao !== nomeLimpo) ||
+            (item.responsavel !== respLimpo) ||
+            (item.tema !== temaLimpo) ||
+            (item.categoria !== catLimpo) ||
+            (item.status !== statusLimpo)
+        ) {
+            await supabase.from('compromissos').update({
+                nome_reuniao: nomeLimpo,
+                responsavel: respLimpo,
+                tema: temaLimpo,
+                categoria: catLimpo,
+                status: statusLimpo
+            }).eq('id', item.id);
+            
+            corrigidos++;
+        }
+
+        // Notifica progresso a cada 20 itens para não travar a tela
+        if (i % 20 === 0 && onProgress) {
+            onProgress(i, total, corrigidos);
+        }
+    }
+    
+    // Atualiza memória local
+    await initializeData();
+    return corrigidos;
 }

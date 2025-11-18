@@ -94,12 +94,30 @@ export async function saveCompromissosBulk(listaCompromissos) {
 
 export async function updateCompromisso(id, updates) {
     const supabaseUpdates = toSupabase(updates);
-    const { data, error } = await supabase.from('compromissos').update(supabaseUpdates).eq('id', id).select().single();
-    if (error) throw error;
+    const { data, error } = await supabase
+        .from('compromissos')
+        .update(supabaseUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error("Erro detalhado ao atualizar compromisso:", error);
+        throw error;
+    }
+    
+    // --- CORREÇÃO DE ERRO: Garante que a atualização ocorreu antes de processar ---
+    if (!data) {
+        // Se data for null, significa que a linha não foi encontrada/atualizada
+        console.warn("Nenhuma linha atualizada para o ID:", id);
+        return; // Sai da função sem tentar processar o objeto null
+    }
 
-    const updatedCompromisso = fromSupabase(data);
+    const updatedCompromisso = fromSupabase(data); 
     const index = compromissosStore.findIndex(c => c.id === id);
-    if (index !== -1) compromissosStore[index] = updatedCompromisso;
+    if (index !== -1) {
+        compromissosStore[index] = updatedCompromisso;
+    }
 }
 
 export async function deleteCompromisso(id) {

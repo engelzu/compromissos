@@ -19,6 +19,7 @@ function fromSupabase(supabaseObj) {
         acao: supabaseObj.acao,
         responsavel: supabaseObj.responsavel,
         status: supabaseObj.status,
+        observacao: supabaseObj.observacao, // NOVO: Leitura do banco
     };
 }
 
@@ -34,6 +35,7 @@ function toSupabase(jsObj) {
         acao: jsObj.acao,
         responsavel: jsObj.responsavel,
         status: jsObj.status,
+        observacao: jsObj.observacao, // NOVO: Escrita para o banco
     };
 }
 
@@ -42,7 +44,7 @@ export async function initializeData() {
         .from('compromissos')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(3000); // Aumentei o limite para garantir
+        .limit(3000); 
 
     if (error) {
         console.error("Erro ao buscar compromissos:", error);
@@ -106,52 +108,36 @@ export async function deleteCompromisso(id) {
     compromissosStore = compromissosStore.filter(c => c.id !== id);
 }
 
-// --- NOVA FUNÇÃO: HIGIENIZAR DADOS (TRIM) ---
 export async function sanitizeDatabase(onProgress) {
-    // 1. Pega tudo do banco direto
     const { data: todos, error } = await supabase.from('compromissos').select('*');
     if (error) throw error;
 
     let corrigidos = 0;
     const total = todos.length;
 
-    // 2. Percorre um por um verificando espaços
     for (let i = 0; i < total; i++) {
         const item = todos[i];
         
-        // Verifica se tem espaços extras nas pontas
         const nomeLimpo = item.nome_reuniao ? item.nome_reuniao.trim() : null;
         const respLimpo = item.responsavel ? item.responsavel.trim() : null;
         const temaLimpo = item.tema ? item.tema.trim() : null;
         const catLimpo  = item.categoria ? item.categoria.trim() : null;
         const statusLimpo = item.status ? item.status.trim() : null;
 
-        // Se algo mudou, atualiza no banco
         if (
-            (item.nome_reuniao !== nomeLimpo) ||
-            (item.responsavel !== respLimpo) ||
-            (item.tema !== temaLimpo) ||
-            (item.categoria !== catLimpo) ||
-            (item.status !== statusLimpo)
+            (item.nome_reuniao !== nomeLimpo) || (item.responsavel !== respLimpo) ||
+            (item.tema !== temaLimpo) || (item.categoria !== catLimpo) || (item.status !== statusLimpo)
         ) {
             await supabase.from('compromissos').update({
-                nome_reuniao: nomeLimpo,
-                responsavel: respLimpo,
-                tema: temaLimpo,
-                categoria: catLimpo,
-                status: statusLimpo
+                nome_reuniao: nomeLimpo, responsavel: respLimpo, tema: temaLimpo, categoria: catLimpo, status: statusLimpo
             }).eq('id', item.id);
-            
             corrigidos++;
         }
 
-        // Notifica progresso a cada 20 itens para não travar a tela
         if (i % 20 === 0 && onProgress) {
             onProgress(i, total, corrigidos);
         }
     }
-    
-    // Atualiza memória local
     await initializeData();
     return corrigidos;
 }

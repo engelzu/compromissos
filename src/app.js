@@ -8,7 +8,6 @@ import { renderAdminPage } from './components/admin.js';
 
 let currentFilter = 'TODOS';
 let searchTerm = '';
-// VARIÁVEL DE PAGINAÇÃO
 let currentPage = 1;
 
 export async function initApp() {
@@ -41,6 +40,7 @@ function renderApp() {
               <h1 class="text-2xl font-bold text-gray-900">COMPROMISSO</h1>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
+                
                 <button id="btn-template" class="btn-secondary text-sm">Modelo XLS 🔒</button>
                 <button id="btn-import" class="btn-secondary text-sm">Importar XLS 🔒</button>
                 
@@ -58,7 +58,7 @@ function renderApp() {
     <div id="modal-container"></div>`;
 }
 
-// FUNÇÃO DE SEGURANÇA
+// FUNÇÃO DE VERIFICAÇÃO DE SENHA
 function checkPassword() {
     const pass = prompt("Digite a senha de administrador:");
     if (pass === "789512") {
@@ -76,21 +76,27 @@ function setupEventListeners() {
   const closeSidebar = () => { sidebar?.classList.add('-translate-x-full'); sidebarOverlay?.classList.add('hidden'); };
   const openSidebar = () => { sidebar?.classList.remove('-translate-x-full'); sidebarOverlay?.classList.remove('hidden'); };
 
-  document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => { e.preventDefault(); renderAdminPage(); });
+  // --- MUDANÇA AQUI: Proteção na Engrenagem (Admin) ---
+  document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => { 
+      e.preventDefault();
+      if (checkPassword()) {
+          renderAdminPage(); 
+      }
+  });
+
   sidebarToggle?.addEventListener('click', (e) => { e.stopPropagation(); sidebar?.classList.contains('-translate-x-full') ? openSidebar() : closeSidebar(); });
   sidebarOverlay?.addEventListener('click', closeSidebar);
   
-  // Busca: Reseta para página 1 quando pesquisa
   document.getElementById('search-input')?.addEventListener('input', (e) => { 
       searchTerm = e.target.value; 
-      currentPage = 1; // Reseta página
+      currentPage = 1; 
       updateTable(); 
   });
   
   document.getElementById('btn-add')?.addEventListener('click', () => openModal(null, () => updateTable()));
   document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
 
-  // --- EVENTOS COM SENHA ---
+  // Proteção nos botões de Importação
   document.getElementById('btn-template')?.addEventListener('click', () => {
       if (checkPassword()) downloadTemplateExcel();
   });
@@ -101,17 +107,13 @@ function setupEventListeners() {
   
   document.getElementById('file-input')?.addEventListener('change', processExcelImport);
   
-  // DELEGAÇÃO DE EVENTOS (Para botões que são recriados, como a paginação)
   document.body.addEventListener('click', async function(e) {
-    
-    // Paginação - Próximo
     if (e.target.closest('#btn-next-page') || e.target.closest('#btn-next-page-mobile')) {
         currentPage++;
         updateTable();
         return;
     }
 
-    // Paginação - Anterior
     if (e.target.closest('#btn-prev-page') || e.target.closest('#btn-prev-page-mobile')) {
         if (currentPage > 1) {
             currentPage--;
@@ -125,7 +127,7 @@ function setupEventListeners() {
       const area = sidebarItem.dataset.area;
       if (currentFilter !== area) {
           currentFilter = area;
-          currentPage = 1; // Reseta página ao mudar filtro
+          currentPage = 1;
           updateTable();
       }
       if (window.innerWidth < 1024) closeSidebar();
@@ -151,7 +153,6 @@ function setupEventListeners() {
 }
 
 function updateTable() {
-  // Sempre passa a página atual para renderizar corretamente
   document.getElementById('table-container').innerHTML = renderTable(getCompromissos(), currentFilter, searchTerm, currentPage);
   document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
 }

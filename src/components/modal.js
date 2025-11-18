@@ -9,6 +9,31 @@ export function openModal(compromisso = null, onSave) {
   const reunioes = getReunioes();
   const responsaveis = getResponsaveis();
 
+  // --- FUNÇÃO AUXILIAR INTELIGENTE ---
+  // Ela garante que o valor atual apareça selecionado, mesmo que não esteja na lista oficial
+  // ou tenha espaços extras.
+  const renderOptions = (items, currentValue) => {
+    const normalizedCurrent = currentValue ? currentValue.trim() : '';
+    
+    // Verifica se o valor atual existe na lista oficial (ignorando espaços)
+    const exists = items.some(item => item.name.trim() === normalizedCurrent);
+
+    let optionsHtml = '';
+
+    // Se o valor atual existe e NÃO está na lista oficial, adicionamos ele no topo como opção selecionada
+    if (currentValue && !exists) {
+        optionsHtml += `<option value="${currentValue}" selected>${currentValue}</option>`;
+    }
+
+    // Gera o resto da lista
+    optionsHtml += items.map(item => {
+        const isSelected = item.name.trim() === normalizedCurrent;
+        return `<option value="${item.name}" ${isSelected ? 'selected' : ''}>${item.name}</option>`;
+    }).join('');
+
+    return optionsHtml;
+  };
+
   modalContainer.innerHTML = `
     <div class="modal-overlay" id="modal-overlay">
       <div class="modal-content">
@@ -42,9 +67,7 @@ export function openModal(compromisso = null, onSave) {
               <label class="block text-sm font-medium text-gray-700 mb-2">Área</label>
               <select name="categoria" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                 <option value="">Selecione...</option>
-                ${areas.map(area => `
-                  <option value="${area.name}" ${compromisso?.categoria === area.name ? 'selected' : ''}>${area.name}</option>
-                `).join('')}
+                ${renderOptions(areas, compromisso?.categoria)}
               </select>
             </div>
 
@@ -52,9 +75,7 @@ export function openModal(compromisso = null, onSave) {
               <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Reunião</label>
               <select name="nomeReuniao" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                 <option value="">Selecione...</option>
-                ${reunioes.map(reuniao => `
-                  <option value="${reuniao.name}" ${compromisso?.nomeReuniao === reuniao.name ? 'selected' : ''}>${reuniao.name}</option>
-                `).join('')}
+                ${renderOptions(reunioes, compromisso?.nomeReuniao)}
               </select>
             </div>
             
@@ -62,9 +83,7 @@ export function openModal(compromisso = null, onSave) {
               <label class="block text-sm font-medium text-gray-700 mb-2">Responsável</label>
               <select name="responsavel" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                 <option value="">Selecione...</option>
-                ${responsaveis.map(resp => `
-                  <option value="${resp.name}" ${compromisso?.responsavel === resp.name ? 'selected' : ''}>${resp.name}</option>
-                `).join('')}
+                ${renderOptions(responsaveis, compromisso?.responsavel)}
               </select>
             </div>
 
@@ -83,7 +102,7 @@ export function openModal(compromisso = null, onSave) {
                 type="date" 
                 name="dataRegistro" 
                 required
-                value="${compromisso?.dataRegistro || new Date().toISOString().split('T')[0]}"
+                value="${compromisso?.dataRegistro ? compromisso.dataRegistro.split('T')[0] : new Date().toISOString().split('T')[0]}"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -94,7 +113,7 @@ export function openModal(compromisso = null, onSave) {
                 type="date" 
                 name="dataPrazo" 
                 required
-                value="${compromisso?.dataPrazo || ''}"
+                value="${compromisso?.dataPrazo ? compromisso.dataPrazo.split('T')[0] : ''}"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -155,6 +174,7 @@ export function openModal(compromisso = null, onSave) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(form);
+    
     const data = {
       prioridade: parseInt(formData.get('prioridade')),
       categoria: formData.get('categoria'),
@@ -164,7 +184,7 @@ export function openModal(compromisso = null, onSave) {
       tema: formData.get('tema'),
       acao: formData.get('acao'),
       responsavel: formData.get('responsavel'),
-      status: formData.get('status'), // Adicionado
+      status: formData.get('status'),
     };
 
     if (isEdit) {
@@ -177,4 +197,3 @@ export function openModal(compromisso = null, onSave) {
     onSave();
   });
 }
-

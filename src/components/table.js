@@ -2,7 +2,6 @@ import { getPriorityIcon, getStatusColor, formatDate, getStatusBadge } from '../
 
 const ITEMS_PER_PAGE = 10;
 
-// Recebe os novos parâmetros de ordenação (sortField e sortDirection)
 export function renderTable(compromissos, filterArea, search, currentPage = 1, filterStatus = '', filterResponsavel = '', filterReuniao = '', sortField = '', sortDirection = 'desc') {
   
   let filtered = compromissos;
@@ -11,7 +10,6 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
   const respTerm = filterResponsavel.trim().toLowerCase();
   const reuniaoTerm = filterReuniao.trim().toLowerCase();
 
-  // Filtros (mantidos)
   if (filterArea !== 'TODOS') { filtered = filtered.filter(c => c.categoria === filterArea); }
   if (search) {
     const s = search.toLowerCase();
@@ -33,15 +31,21 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
     `;
   }
 
-  // Paginação
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const pagedItems = filtered.slice(startIndex, endIndex);
   
-  // Ícone de ordenação
-  const sortIcon = sortDirection === 'desc' ? 'V' : 'Λ'; // V = Desc, Λ = Asc
+  // --- NOVO ÍCONE SVG DE ORDENAÇÃO ---
+  const sortIconHtml = (field) => {
+    if (sortField !== field) return `<svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>`; // Seta para cima e para baixo (neutra)
+    if (sortDirection === 'desc') {
+      return `<svg class="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>`; // Seta para baixo (descendente)
+    } else {
+      return `<svg class="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>`; // Seta para cima (ascendente)
+    }
+  };
 
   return `
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -52,11 +56,11 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Prioridade</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome da Reunião</th>
               
-              <th id="sort-dataRegistro" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors flex items-center gap-1">
-                Data Registro
-                <span class="${sortField === 'dataRegistro' ? 'text-green-600' : 'text-gray-400'} text-base">
-                  ${sortField === 'dataRegistro' ? sortIcon : '—'}
-                </span>
+              <th id="sort-dataRegistro" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors">
+                <div class="flex items-center gap-1">
+                    Data Registro
+                    ${sortIconHtml('dataRegistro')}
+                </div>
               </th>
               
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tema</th>
@@ -97,6 +101,61 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
         </table>
       </div>
 
+      <div class="grid grid-cols-1 gap-4 md:hidden p-4">
+        ${pagedItems.map(c => `
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 space-y-3">
+              <div class="flex justify-between items-start">
+                <div class="font-medium text-gray-900 pr-2">${c.nomeReuniao || c.tema}</div>
+                ${getPriorityIcon(c.prioridade)}
+              </div>
+              <div class="text-sm text-gray-600 space-y-2">
+                  <p>${getStatusBadge(c.status)}</p>
+                <p><strong class="font-medium text-gray-800">Ação:</strong> ${c.acao}</p>
+                <p><strong class="font-medium text-gray-800">Responsável:</strong> ${c.responsavel}</p>
+                <p><strong class="font-medium text-gray-800">Observação:</strong> ${c.observacao || '-'}</p>
+              </div>
+              <div class="flex items-center justify-between text-sm pt-3 border-t border-gray-100 mt-3">
+                <div><span class="text-gray-500">Prazo:</span> <span class="font-medium text-gray-700">${formatDate(c.dataPrazo)}</span></div>
+                <div class="flex gap-2">
+                  <button class="btn-edit text-blue-600" data-id="${c.id}">Editar</button>
+                  <button class="btn-delete text-red-600" data-id="${c.id}">Excluir</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
+
+      <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between sm:px-6">
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-gray-700">
+              Mostrando <span class="font-medium">${startIndex + 1}</span> a <span class="font-medium">${Math.min(endIndex, filtered.length)}</span> de <span class="font-medium">${filtered.length}</span>
+            </p>
+          </div>
+          <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+              <button id="btn-prev-page" ${safePage === 1 ? 'disabled' : ''} class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                <span class="sr-only">Anterior</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+              </button>
+              <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                ${safePage} / ${totalPages}
+              </span>
+              <button id="btn-next-page" ${safePage === totalPages ? 'disabled' : ''} class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                <span class="sr-only">Próximo</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+        <div class="flex items-center justify-between w-full sm:hidden">
+           <button id="btn-prev-page-mobile" ${safePage === 1 ? 'disabled' : ''} class="btn-secondary text-xs">Anterior</button>
+           <span class="text-sm text-gray-700">${safePage} / ${totalPages}</span>
+           <button id="btn-next-page-mobile" ${safePage === totalPages ? 'disabled' : ''} class="btn-secondary text-xs">Próximo</button>
+        </div>
+      </div>
+    </div>
   `;
 }

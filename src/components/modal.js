@@ -1,15 +1,16 @@
 import { getAreas, getReunioes, getResponsaveis } from '../services/storage.js';
 import { saveCompromisso, updateCompromisso } from '../services/storage.js';
-import { supabase } from '../services/supabase.js'; // NOVO: Para buscar o histórico
+import { supabase } from '../services/supabase.js'; // 1. NOVO: Necessário para buscar o histórico
 
-// Função que busca e formata o histórico de edições
+// 2. FUNÇÃO QUE BUSCA E FORMATA O HISTÓRICO
 async function fetchHistory(compromissoId) {
     if (!compromissoId) return '';
     
+    // Busca na tabela de histórico criada no Supabase
     const { data, error } = await supabase
         .from('compromissos_history')
         .select('*')
-        .eq('compromisso_id', compromissoId)
+        .eq('compromisso_id', compromissoId) // Filtra pelo ID do compromisso atual
         .order('changed_at', { ascending: false });
 
     if (error) {
@@ -21,7 +22,10 @@ async function fetchHistory(compromissoId) {
         return '<p class="text-gray-500 text-xs mt-2">Nenhuma alteração de Data Prazo registrada.</p>';
     }
 
+    // Mapeia e formata os dados para o HTML
     return data.map(log => {
+        // Os nomes das colunas aqui (changed_at, old_data_prazo, new_data_prazo) DEVEM 
+        // ser exatamente os nomes no banco de dados, que o Supabase retorna.
         const dataFormatada = new Date(log.changed_at).toLocaleDateString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
         const oldDate = log.old_data_prazo ? new Date(log.old_data_prazo).toLocaleDateString('pt-BR') : 'N/A';
         const newDate = log.new_data_prazo ? new Date(log.new_data_prazo).toLocaleDateString('pt-BR') : 'N/A';
@@ -186,10 +190,14 @@ export function openModal(compromisso = null, onSave) {
     </div>
   `;
 
-  // Se for edição, carregamos o histórico
+  // 4. CHAMADA ASSÍNCRONA PARA CARREGAR O HISTÓRICO
   if (isEdit) {
+      // O compromisso.id é o UUID que usamos para filtrar o histórico
       fetchHistory(compromisso.id).then(html => {
-          document.getElementById('history-content').innerHTML = html;
+          const historyContent = document.getElementById('history-content');
+          if (historyContent) { // Verifica se o elemento existe (para evitar erros se o HTML não foi renderizado)
+            historyContent.innerHTML = html;
+          }
       });
   }
 

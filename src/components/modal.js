@@ -13,7 +13,7 @@ async function fetchHistory(compromissoId) {
 
     if (error) {
         console.error('Erro ao buscar histórico:', error);
-        // MUDANÇA: Retorna a mensagem de erro do Supabase para o painel
+        // Retorna a mensagem de erro do Supabase para o painel
         return `<p class="text-red-500 text-xs mt-2">ERRO SQL: ${error.message}.</p>`; 
     }
 
@@ -22,8 +22,9 @@ async function fetchHistory(compromissoId) {
     }
 
     return data.map(log => {
+        // --- CORREÇÃO AQUI: Mudança para toLocaleString ---
         const dataFormatada = log.changed_at 
-            ? new Date(log.changed_at).toLocaleDateString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+            ? new Date(log.changed_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
             : 'N/A'; 
             
         const oldDate = log.old_data_prazo 
@@ -201,7 +202,6 @@ export function openModal(compromisso = null, onSave) {
             historyContent.innerHTML = html;
           }
       }).catch(err => {
-          // AQUI: Exibe o erro exato na tela para facilitar o diagnóstico
           console.error("ERRO CRÍTICO no carregamento do Histórico:", err);
           document.getElementById('history-content').innerHTML = `
             <p class="text-red-500 text-xs mt-2 font-bold">ERRO FATAL NA BUSCA:</p>

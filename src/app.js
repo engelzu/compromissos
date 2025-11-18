@@ -1,5 +1,5 @@
 import { areas } from './data/areas.js';
-import { getCompromissos, deleteCompromisso, initializeData, saveCompromissosBulk } from './services/storage.js'; // Importando a nova função Bulk
+import { getCompromissos, deleteCompromisso, initializeData, saveCompromissosBulk, saveCompromisso } from './services/storage.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
@@ -8,6 +8,8 @@ import { renderAdminPage } from './components/admin.js';
 
 let currentFilter = 'TODOS';
 let searchTerm = '';
+// VARIÁVEL DE PAGINAÇÃO
+let currentPage = 1;
 
 export async function initApp() {
   const app = document.getElementById('app');
@@ -39,20 +41,31 @@ function renderApp() {
               <h1 class="text-2xl font-bold text-gray-900">COMPROMISSO</h1>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
-                <button id="btn-template" class="btn-secondary text-sm">Modelo XLS</button>
-                <button id="btn-import" class="btn-secondary text-sm">Importar XLS</button>
+                <button id="btn-template" class="btn-secondary text-sm">Modelo XLS 🔒</button>
+                <button id="btn-import" class="btn-secondary text-sm">Importar XLS 🔒</button>
+                
                 <button id="btn-export" class="btn-secondary text-sm">Exportar</button>
                 <button id="btn-add" class="btn-primary text-sm whitespace-nowrap">+ NOVO REG...</button>
               </div>
             </div>
             <div id="table-container">
-              ${renderTable(getCompromissos(), currentFilter, searchTerm)}
+              ${renderTable(getCompromissos(), currentFilter, searchTerm, currentPage)}
             </div>
           </div>
         </main>
       </div>
     </div>
     <div id="modal-container"></div>`;
+}
+
+// FUNÇÃO DE SEGURANÇA
+function checkPassword() {
+    const pass = prompt("Digite a senha de administrador:");
+    if (pass === "789512") {
+        return true;
+    }
+    alert("Senha incorreta!");
+    return false;
 }
 
 function setupEventListeners() {
@@ -66,23 +79,59 @@ function setupEventListeners() {
   document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => { e.preventDefault(); renderAdminPage(); });
   sidebarToggle?.addEventListener('click', (e) => { e.stopPropagation(); sidebar?.classList.contains('-translate-x-full') ? openSidebar() : closeSidebar(); });
   sidebarOverlay?.addEventListener('click', closeSidebar);
-  document.getElementById('search-input')?.addEventListener('input', (e) => { searchTerm = e.target.value; updateTable(); });
+  
+  // Busca: Reseta para página 1 quando pesquisa
+  document.getElementById('search-input')?.addEventListener('input', (e) => { 
+      searchTerm = e.target.value; 
+      currentPage = 1; // Reseta página
+      updateTable(); 
+  });
+  
   document.getElementById('btn-add')?.addEventListener('click', () => openModal(null, () => updateTable()));
   document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
-  document.getElementById('btn-template')?.addEventListener('click', downloadTemplateExcel);
-  document.getElementById('btn-import')?.addEventListener('click', () => document.getElementById('file-input').click());
+
+  // --- EVENTOS COM SENHA ---
+  document.getElementById('btn-template')?.addEventListener('click', () => {
+      if (checkPassword()) downloadTemplateExcel();
+  });
+
+  document.getElementById('btn-import')?.addEventListener('click', () => {
+      if (checkPassword()) document.getElementById('file-input').click();
+  });
   
-  // AQUI ESTÁ A LÓGICA DE IMPORTAÇÃO EM LOTE
   document.getElementById('file-input')?.addEventListener('change', processExcelImport);
   
+  // DELEGAÇÃO DE EVENTOS (Para botões que são recriados, como a paginação)
   document.body.addEventListener('click', async function(e) {
+    
+    // Paginação - Próximo
+    if (e.target.closest('#btn-next-page') || e.target.closest('#btn-next-page-mobile')) {
+        currentPage++;
+        updateTable();
+        return;
+    }
+
+    // Paginação - Anterior
+    if (e.target.closest('#btn-prev-page') || e.target.closest('#btn-prev-page-mobile')) {
+        if (currentPage > 1) {
+            currentPage--;
+            updateTable();
+        }
+        return;
+    }
+
     const sidebarItem = e.target.closest('.sidebar-item');
     if (sidebarItem) {
-      currentFilter = sidebarItem.dataset.area;
-      updateTable();
+      const area = sidebarItem.dataset.area;
+      if (currentFilter !== area) {
+          currentFilter = area;
+          currentPage = 1; // Reseta página ao mudar filtro
+          updateTable();
+      }
       if (window.innerWidth < 1024) closeSidebar();
       return;
     }
+    
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
       const id = editBtn.dataset.id;
@@ -90,6 +139,7 @@ function setupEventListeners() {
       openModal(compromisso, () => updateTable());
       return;
     }
+    
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
       if (confirm('Excluir este compromisso?')) {
@@ -101,7 +151,8 @@ function setupEventListeners() {
 }
 
 function updateTable() {
-  document.getElementById('table-container').innerHTML = renderTable(getCompromissos(), currentFilter, searchTerm);
+  // Sempre passa a página atual para renderizar corretamente
+  document.getElementById('table-container').innerHTML = renderTable(getCompromissos(), currentFilter, searchTerm, currentPage);
   document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
 }
 
@@ -136,7 +187,7 @@ async function processExcelImport(event) {
 
     const btnImport = document.getElementById('btn-import');
     const originalText = btnImport.innerHTML;
-    btnImport.innerHTML = 'Lendo Arquivo...';
+    btnImport.innerHTML = 'Lendo...';
     btnImport.disabled = true;
 
     const reader = new FileReader();
@@ -152,8 +203,6 @@ async function processExcelImport(event) {
                 btnImport.innerHTML = 'Processando...';
                 
                 const listaParaSalvar = [];
-                
-                // Prepara todos os objetos primeiro
                 for (let row of jsonData) {
                     const safeDate = (val) => {
                         if (!val) return null;
@@ -179,14 +228,11 @@ async function processExcelImport(event) {
                     });
                 }
 
-                // ENVIAR EM BLOCOS (CHUNKS) DE 50
                 const TAMANHO_LOTE = 50;
                 let salvos = 0;
-                
                 for (let i = 0; i < listaParaSalvar.length; i += TAMANHO_LOTE) {
                     const lote = listaParaSalvar.slice(i, i + TAMANHO_LOTE);
                     btnImport.innerHTML = `Salvando ${i} de ${listaParaSalvar.length}...`;
-                    
                     await saveCompromissosBulk(lote);
                     salvos += lote.length;
                 }
@@ -196,7 +242,7 @@ async function processExcelImport(event) {
             }
         } catch (error) {
             console.error(error);
-            alert("Erro na importação: " + error.message);
+            alert("Erro: " + error.message);
         } finally {
             btnImport.innerHTML = originalText;
             btnImport.disabled = false;

@@ -4,6 +4,8 @@ import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
 import { openModal } from './components/modal.js';
+// IMPORTAÇÃO NOVA: Certifique-se de que admin.js está nesta pasta ou ajuste para './components/admin.js'
+import { renderAdminPage } from './admin.js'; 
 
 let currentFilter = 'TODOS';
 let searchTerm = '';
@@ -83,6 +85,12 @@ function setupEventListeners() {
     sidebar?.classList.remove('-translate-x-full');
     sidebarOverlay?.classList.remove('hidden');
   };
+
+  // CORREÇÃO: Adicionado evento para o botão de Admin
+  document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => {
+    e.preventDefault(); // Evita comportamento padrão se houver
+    renderAdminPage();  // Carrega a página de administração
+  });
 
   sidebarToggle?.addEventListener('click', (e) => {
     e.stopPropagation();

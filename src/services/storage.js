@@ -19,7 +19,7 @@ function fromSupabase(supabaseObj) {
         acao: supabaseObj.acao,
         responsavel: supabaseObj.responsavel,
         status: supabaseObj.status,
-        observacao: supabaseObj.observacao, // NOVO: Leitura do banco
+        observacao: supabaseObj.observacao, 
     };
 }
 
@@ -35,7 +35,7 @@ function toSupabase(jsObj) {
         acao: jsObj.acao,
         responsavel: jsObj.responsavel,
         status: jsObj.status,
-        observacao: jsObj.observacao, // NOVO: Escrita para o banco
+        observacao: jsObj.observacao, 
     };
 }
 

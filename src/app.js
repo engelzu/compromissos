@@ -1,5 +1,6 @@
 import { areas } from './data/areas.js';
-import { getCompromissos, deleteCompromisso, initializeData, saveCompromissosBulk, saveCompromisso } from './services/storage.js';
+// IMPORTAMOS OS GETTERS DE REUNIOES E RESPONSAVEIS
+import { getCompromissos, deleteCompromisso, initializeData, saveCompromissosBulk, saveCompromisso, getReunioes, getResponsaveis } from './services/storage.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
@@ -9,6 +10,11 @@ import { renderAdminPage } from './components/admin.js';
 let currentFilter = 'TODOS';
 let searchTerm = '';
 let currentPage = 1;
+
+// NOVAS VARIÁVEIS DE FILTRO
+let filterStatus = '';
+let filterResponsavel = '';
+let filterReuniao = '';
 
 export async function initApp() {
   const app = document.getElementById('app');
@@ -26,6 +32,11 @@ export async function initApp() {
 
 function renderApp() {
   const app = document.getElementById('app');
+  
+  // PREPARA AS OPÇÕES DOS DROPDOWNS
+  const reunioesOpts = getReunioes().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+  const responsaveisOpts = getResponsaveis().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+
   app.innerHTML = `
     <div class="min-h-screen flex flex-col lg:flex-row bg-gray-50">
       <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
@@ -36,20 +47,46 @@ function renderApp() {
         ${renderHeader()}
         <main class="flex-1 overflow-y-auto">
           <div class="p-4 lg:p-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
               <h1 class="text-2xl font-bold text-gray-900">COMPROMISSO</h1>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
-                
                 <button id="btn-template" class="btn-secondary text-sm">Modelo XLS 🔒</button>
                 <button id="btn-import" class="btn-secondary text-sm">Importar XLS 🔒</button>
-                
                 <button id="btn-export" class="btn-secondary text-sm">Exportar</button>
                 <button id="btn-add" class="btn-primary text-sm whitespace-nowrap">+ NOVO REG...</button>
               </div>
             </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 bg-white p-4 rounded-lg shadow-sm">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <select id="filter-status" class="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 p-2 border">
+                        <option value="">Todos os Status</option>
+                        <option value="Não Iniciada">Não Iniciada</option>
+                        <option value="Em Andamento">Em Andamento</option>
+                        <option value="Concluída">Concluída</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Responsável</label>
+                    <select id="filter-responsavel" class="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 p-2 border">
+                        <option value="">Todos os Responsáveis</option>
+                        ${responsaveisOpts}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Nome da Reunião</label>
+                    <select id="filter-reuniao" class="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 p-2 border">
+                        <option value="">Todas as Reuniões</option>
+                        ${reunioesOpts}
+                    </select>
+                </div>
+            </div>
+
             <div id="table-container">
-              ${renderTable(getCompromissos(), currentFilter, searchTerm, currentPage)}
+              ${renderTable(getCompromissos(), currentFilter, searchTerm, currentPage, filterStatus, filterResponsavel, filterReuniao)}
             </div>
           </div>
         </main>
@@ -58,12 +95,9 @@ function renderApp() {
     <div id="modal-container"></div>`;
 }
 
-// FUNÇÃO DE VERIFICAÇÃO DE SENHA
 function checkPassword() {
     const pass = prompt("Digite a senha de administrador:");
-    if (pass === "789512") {
-        return true;
-    }
+    if (pass === "789512") return true;
     alert("Senha incorreta!");
     return false;
 }
@@ -76,12 +110,9 @@ function setupEventListeners() {
   const closeSidebar = () => { sidebar?.classList.add('-translate-x-full'); sidebarOverlay?.classList.add('hidden'); };
   const openSidebar = () => { sidebar?.classList.remove('-translate-x-full'); sidebarOverlay?.classList.remove('hidden'); };
 
-  // --- MUDANÇA AQUI: Proteção na Engrenagem (Admin) ---
   document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => { 
       e.preventDefault();
-      if (checkPassword()) {
-          renderAdminPage(); 
-      }
+      if (checkPassword()) renderAdminPage(); 
   });
 
   sidebarToggle?.addEventListener('click', (e) => { e.stopPropagation(); sidebar?.classList.contains('-translate-x-full') ? openSidebar() : closeSidebar(); });
@@ -92,19 +123,32 @@ function setupEventListeners() {
       currentPage = 1; 
       updateTable(); 
   });
+
+  // --- LISTENERS DOS NOVOS FILTROS ---
+  document.getElementById('filter-status')?.addEventListener('change', (e) => {
+      filterStatus = e.target.value;
+      currentPage = 1;
+      updateTable();
+  });
+
+  document.getElementById('filter-responsavel')?.addEventListener('change', (e) => {
+      filterResponsavel = e.target.value;
+      currentPage = 1;
+      updateTable();
+  });
+
+  document.getElementById('filter-reuniao')?.addEventListener('change', (e) => {
+      filterReuniao = e.target.value;
+      currentPage = 1;
+      updateTable();
+  });
+  // -----------------------------------
   
   document.getElementById('btn-add')?.addEventListener('click', () => openModal(null, () => updateTable()));
   document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
 
-  // Proteção nos botões de Importação
-  document.getElementById('btn-template')?.addEventListener('click', () => {
-      if (checkPassword()) downloadTemplateExcel();
-  });
-
-  document.getElementById('btn-import')?.addEventListener('click', () => {
-      if (checkPassword()) document.getElementById('file-input').click();
-  });
-  
+  document.getElementById('btn-template')?.addEventListener('click', () => { if (checkPassword()) downloadTemplateExcel(); });
+  document.getElementById('btn-import')?.addEventListener('click', () => { if (checkPassword()) document.getElementById('file-input').click(); });
   document.getElementById('file-input')?.addEventListener('change', processExcelImport);
   
   document.body.addEventListener('click', async function(e) {
@@ -113,15 +157,10 @@ function setupEventListeners() {
         updateTable();
         return;
     }
-
     if (e.target.closest('#btn-prev-page') || e.target.closest('#btn-prev-page-mobile')) {
-        if (currentPage > 1) {
-            currentPage--;
-            updateTable();
-        }
+        if (currentPage > 1) { currentPage--; updateTable(); }
         return;
     }
-
     const sidebarItem = e.target.closest('.sidebar-item');
     if (sidebarItem) {
       const area = sidebarItem.dataset.area;
@@ -133,7 +172,6 @@ function setupEventListeners() {
       if (window.innerWidth < 1024) closeSidebar();
       return;
     }
-    
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
       const id = editBtn.dataset.id;
@@ -141,7 +179,6 @@ function setupEventListeners() {
       openModal(compromisso, () => updateTable());
       return;
     }
-    
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
       if (confirm('Excluir este compromisso?')) {
@@ -153,7 +190,10 @@ function setupEventListeners() {
 }
 
 function updateTable() {
-  document.getElementById('table-container').innerHTML = renderTable(getCompromissos(), currentFilter, searchTerm, currentPage);
+  document.getElementById('table-container').innerHTML = renderTable(getCompromissos(), currentFilter, searchTerm, currentPage, filterStatus, filterResponsavel, filterReuniao);
+  // Precisamos manter os valores dos selects caso a tabela seja redesenhada
+  // Mas como estamos redesenhando apenas o table-container, os selects fora dele não se perdem.
+  // Se a barra lateral mudar, não afeta os filtros do topo.
   document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
 }
 

@@ -1,6 +1,6 @@
 import { getAreas, getReunioes, getResponsaveis } from '../services/storage.js';
 import { saveCompromisso, updateCompromisso } from '../services/storage.js';
-import { supabase } from '../services/supabase.js'; 
+import { supabase } from '../services/supabase.js';
 
 async function fetchHistory(compromissoId) {
     if (!compromissoId) return '';
@@ -13,7 +13,8 @@ async function fetchHistory(compromissoId) {
 
     if (error) {
         console.error('Erro ao buscar histórico:', error);
-        return '<p class="text-red-500 text-xs mt-2">Erro ao carregar histórico.</p>';
+        // MUDANÇA: Retorna a mensagem de erro do Supabase para o painel
+        return `<p class="text-red-500 text-xs mt-2">ERRO SQL: ${error.message}.</p>`; 
     }
 
     if (data.length === 0) {
@@ -21,7 +22,6 @@ async function fetchHistory(compromissoId) {
     }
 
     return data.map(log => {
-        // --- CORREÇÃO DE ERRO AQUI: Verifica se o campo existe antes de formatar ---
         const dataFormatada = log.changed_at 
             ? new Date(log.changed_at).toLocaleDateString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
             : 'N/A'; 
@@ -201,8 +201,11 @@ export function openModal(compromisso = null, onSave) {
             historyContent.innerHTML = html;
           }
       }).catch(err => {
-          console.error("Erro ao carregar o histórico:", err);
-          document.getElementById('history-content').innerHTML = '<p class="text-red-500 text-xs mt-2">Falha ao carregar o histórico. Verifique o console.</p>';
+          // AQUI: Exibe o erro exato na tela para facilitar o diagnóstico
+          console.error("ERRO CRÍTICO no carregamento do Histórico:", err);
+          document.getElementById('history-content').innerHTML = `
+            <p class="text-red-500 text-xs mt-2 font-bold">ERRO FATAL NA BUSCA:</p>
+            <p class="text-red-500 text-xs mt-1 break-words">${err.message || 'Verifique o console (F12) para detalhes.'}</p>`;
       });
   }
 

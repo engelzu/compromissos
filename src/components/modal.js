@@ -1,8 +1,7 @@
 import { getAreas, getReunioes, getResponsaveis } from '../services/storage.js';
 import { saveCompromisso, updateCompromisso } from '../services/storage.js';
-import { supabase } from '../services/supabase.js';
+import { supabase } from '../services/supabase.js'; 
 
-// Função que busca e formata o histórico de edições
 async function fetchHistory(compromissoId) {
     if (!compromissoId) return '';
     
@@ -22,9 +21,18 @@ async function fetchHistory(compromissoId) {
     }
 
     return data.map(log => {
-        const dataFormatada = new Date(log.changed_at).toLocaleDateString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-        const oldDate = log.old_data_prazo ? new Date(log.old_data_prazo).toLocaleDateString('pt-BR') : 'N/A';
-        const newDate = log.new_data_prazo ? new Date(log.new_data_prazo).toLocaleDateString('pt-BR') : 'N/A';
+        // --- CORREÇÃO DE ERRO AQUI: Verifica se o campo existe antes de formatar ---
+        const dataFormatada = log.changed_at 
+            ? new Date(log.changed_at).toLocaleDateString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+            : 'N/A'; 
+            
+        const oldDate = log.old_data_prazo 
+            ? new Date(log.old_data_prazo).toLocaleDateString('pt-BR') 
+            : 'N/A';
+            
+        const newDate = log.new_data_prazo 
+            ? new Date(log.new_data_prazo).toLocaleDateString('pt-BR') 
+            : 'N/A';
 
         return `
             <div class="border-b border-gray-100 py-1 text-xs">
@@ -186,7 +194,6 @@ export function openModal(compromisso = null, onSave) {
     </div>
   `;
 
-  // 4. CHAMADA ASSÍNCRONA PARA CARREGAR O HISTÓRICO
   if (isEdit) {
       fetchHistory(compromisso.id).then(html => {
           const historyContent = document.getElementById('history-content');
@@ -194,7 +201,6 @@ export function openModal(compromisso = null, onSave) {
             historyContent.innerHTML = html;
           }
       }).catch(err => {
-          // Captura erros na busca do histórico
           console.error("Erro ao carregar o histórico:", err);
           document.getElementById('history-content').innerHTML = '<p class="text-red-500 text-xs mt-2">Falha ao carregar o histórico. Verifique o console.</p>';
       });
@@ -234,7 +240,7 @@ export function openModal(compromisso = null, onSave) {
       observacao: formData.get('observacao'),
     };
 
-    try { // <-- NOVO: TRATAMENTO DE ERROS AQUI
+    try { 
         if (isEdit) {
           await updateCompromisso(compromisso.id, data);
         } else {

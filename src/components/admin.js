@@ -1,26 +1,20 @@
 import { supabase } from '../services/supabase.js';
+// Importamos a nova função
+import { sanitizeDatabase } from '../services/storage.js';
 
-// Variáveis de estado
 let areas = [];
 let reunioes = [];
 let responsaveis = [];
 
-// Busca dados do Supabase
 async function fetchAdminData() {
-    const { data: areasData, error: areasError } = await supabase.from('areas').select('*').order('name');
-    if (areasError) console.error('Erro areas:', areasError);
-    else areas = areasData || [];
-
-    const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*').order('name');
-    if (reunioesError) console.error('Erro reunioes:', reunioesError);
-    else reunioes = reunioesData || [];
-    
-    const { data: responsaveisData, error: responsaveisError } = await supabase.from('responsaveis').select('*').order('name');
-    if (responsaveisError) console.error('Erro responsaveis:', responsaveisError);
-    else responsaveis = responsaveisData || [];
+    const { data: areasData } = await supabase.from('areas').select('*').order('name');
+    areas = areasData || [];
+    const { data: reunioesData } = await supabase.from('reunioes').select('*').order('name');
+    reunioes = reunioesData || [];
+    const { data: responsaveisData } = await supabase.from('responsaveis').select('*').order('name');
+    responsaveis = responsaveisData || [];
 }
 
-// Gera o HTML das tabelas
 function renderManagementTable(tableName, items, columns) {
     const tableTitle = tableName.charAt(0).toUpperCase() + tableName.slice(1);
     return `
@@ -55,7 +49,6 @@ function renderManagementTable(tableName, items, columns) {
     `;
 }
 
-// Função Principal de Renderização
 export async function renderAdminPage() {
     await fetchAdminData();
     const app = document.getElementById('app');
@@ -63,76 +56,84 @@ export async function renderAdminPage() {
     app.innerHTML = `
         <div id="admin-container" class="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
             <div class="max-w-5xl mx-auto">
+                
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <h2 class="text-3xl font-bold text-gray-900">Painel de Administração</h2>
-                    <button id="back-to-app" class="btn-secondary text-sm w-full sm:w-auto">← Voltar</button>
+                    
+                    <div class="flex gap-2">
+                        <button id="btn-fix-data" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                           Corrigir Dados
+                        </button>
+
+                        <button id="back-to-app" class="btn-secondary text-sm">← Voltar</button>
+                    </div>
                 </div>
 
-                ${renderManagementTable('areas', areas, [{name: 'Nome', key: 'name'}, {name: 'Ícone (Emoji)', key: 'icon'}])}
+                ${renderManagementTable('areas', areas, [{name: 'Nome', key: 'name'}, {name: 'Ícone', key: 'icon'}])}
                 ${renderManagementTable('reunioes', reunioes, [{name: 'Nome da Reunião', key: 'name'}])}
                 ${renderManagementTable('responsaveis', responsaveis, [{name: 'Nome do Responsável', key: 'name'}])}
             </div>
         </div>
     `;
 
-    // Adiciona os eventos APÓS desenhar a tela
     attachEvents();
 }
 
 function attachEvents() {
-    // Voltar
-    document.getElementById('back-to-app').addEventListener('click', () => {
-        window.location.reload(); 
-    });
+    document.getElementById('back-to-app').addEventListener('click', () => { window.location.reload(); });
 
-    // Adicionar
     document.querySelectorAll('.btn-add-item').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            openItemModal(e.target.dataset.table, null, renderAdminPage);
-        });
+        btn.addEventListener('click', (e) => { openItemModal(e.target.dataset.table, null, renderAdminPage); });
     });
 
-    // Container de Eventos (Delegação para Editar e Excluir)
+    // EVENTO DO BOTÃO DE CORRIGIR DADOS
+    document.getElementById('btn-fix-data')?.addEventListener('click', async () => {
+        if(confirm("Isso vai verificar todos os registros e remover espaços em branco dos nomes. Pode levar alguns segundos. Continuar?")) {
+            const btn = document.getElementById('btn-fix-data');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            
+            try {
+                // Chama a função de limpeza com callback de progresso
+                const totalCorrigidos = await sanitizeDatabase((current, total, corrected) => {
+                    btn.innerHTML = `Verificando ${current}/${total}...`;
+                });
+                
+                alert(`Processo concluído!\n${totalCorrigidos} registros foram corrigidos.`);
+            } catch (error) {
+                alert("Erro ao corrigir: " + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    });
+
     const container = document.getElementById('admin-container');
     container.addEventListener('click', async (e) => {
-        
-        // Lógica de EXCLUSÃO
         const deleteBtn = e.target.closest('.btn-delete-item');
         if (deleteBtn) {
-            const tableName = deleteBtn.dataset.table;
-            const id = deleteBtn.dataset.id;
-            
-            if (confirm(`Tem certeza que deseja EXCLUIR este item de '${tableName}'?`)) {
-                try {
-                    const { error } = await supabase.from(tableName).delete().eq('id', id);
-                    if (error) throw error;
-                    alert("Item excluído com sucesso!");
-                    await renderAdminPage(); // Recarrega a tela
-                } catch (error) {
-                    alert("Erro ao excluir: " + error.message);
-                    console.error(error);
-                }
+            if (confirm(`Tem certeza que deseja EXCLUIR este item?`)) {
+                await supabase.from(deleteBtn.dataset.table).delete().eq('id', deleteBtn.dataset.id);
+                renderAdminPage();
             }
             return;
         }
 
-        // Lógica de EDIÇÃO
         const editBtn = e.target.closest('.btn-edit-item');
         if (editBtn) {
             const tableName = editBtn.dataset.table;
             const id = editBtn.dataset.id;
-            
-            let item = null;
+            let item;
             if (tableName === 'areas') item = areas.find(i => i.id == id);
             if (tableName === 'reunioes') item = reunioes.find(i => i.id == id);
             if (tableName === 'responsaveis') item = responsaveis.find(i => i.id == id);
-            
             if (item) openItemModal(tableName, item, renderAdminPage);
         }
     });
 }
 
-// Modal Simples
 function openItemModal(tableName, item = null, onSave) {
     const isEdit = !!item;
     let columns = [];
@@ -162,29 +163,21 @@ function openItemModal(tableName, item = null, onSave) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-
     const overlay = document.getElementById('item-modal-overlay');
     const form = document.getElementById('item-form');
-    
     const closeModal = () => overlay.remove();
+    
     document.getElementById('item-cancel-btn').addEventListener('click', closeModal);
-
+    
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(form);
         const newData = Object.fromEntries(formData.entries());
 
-        let error;
-        if (isEdit) {
-            ({ error } = await supabase.from(tableName).update(newData).eq('id', item.id));
-        } else {
-            ({ error } = await supabase.from(tableName).insert([newData]));
-        }
-
-        if (error) alert('Erro ao salvar: ' + error.message);
-        else {
-            closeModal();
-            onSave();
-        }
+        if (isEdit) await supabase.from(tableName).update(newData).eq('id', item.id);
+        else await supabase.from(tableName).insert([newData]);
+        
+        closeModal();
+        onSave();
     });
 }

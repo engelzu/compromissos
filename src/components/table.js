@@ -2,17 +2,22 @@ import { getPriorityIcon, getStatusColor, formatDate, getStatusBadge } from '../
 
 const ITEMS_PER_PAGE = 10;
 
-// AGORA ACEITAMOS 3 NOVOS PARÂMETROS NO FINAL: filterStatus, filterResponsavel, filterReuniao
+// Agora aceitamos 3 novos parâmetros no final: filterStatus, filterResponsavel, filterReuniao
 export function renderTable(compromissos, filterArea, search, currentPage = 1, filterStatus = '', filterResponsavel = '', filterReuniao = '') {
   
   let filtered = compromissos;
 
-  // 1. Filtro de Área (Sidebar)
+  // --- Normalização dos Termos de Busca (Garante que a comparação seja limpa) ---
+  const statusTerm = filterStatus.trim().toLowerCase();
+  const respTerm = filterResponsavel.trim().toLowerCase();
+  const reuniaoTerm = filterReuniao.trim().toLowerCase();
+
+  // 1. Filtro de Área
   if (filterArea !== 'TODOS') {
     filtered = filtered.filter(c => c.categoria === filterArea);
   }
 
-  // 2. Filtro de Busca Geral (Input de Texto)
+  // 2. Busca Geral
   if (search) {
     const s = search.toLowerCase();
     filtered = filtered.filter(c => 
@@ -23,20 +28,26 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
     );
   }
 
-  // 3. NOVOS FILTROS ESPECÍFICOS
+  // 3. FILTROS ESPECÍFICOS (CORREÇÃO: Tira espaços, coloca em minúsculas)
   if (filterStatus) {
-      filtered = filtered.filter(c => c.status === filterStatus);
+      filtered = filtered.filter(c => 
+          c.status && c.status.trim().toLowerCase() === statusTerm
+      );
   }
 
   if (filterResponsavel) {
-      filtered = filtered.filter(c => c.responsavel === filterResponsavel);
+      filtered = filtered.filter(c => 
+          c.responsavel && c.responsavel.trim().toLowerCase() === respTerm
+      );
   }
 
   if (filterReuniao) {
-      filtered = filtered.filter(c => c.nomeReuniao === filterReuniao);
+      filtered = filtered.filter(c => 
+          c.nomeReuniao && c.nomeReuniao.trim().toLowerCase() === reuniaoTerm
+      );
   }
 
-  // Caso não tenha resultados
+  // Caso vazio
   if (filtered.length === 0) {
     return `
       <div class="bg-white rounded-lg shadow-sm p-12 text-center">
@@ -44,7 +55,7 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum compromisso encontrado</h3>
-        <p class="text-gray-500">Tente limpar os filtros.</p>
+        <p class="text-gray-500">Tente limpar os filtros ou verifique a ortografia.</p>
       </div>
     `;
   }

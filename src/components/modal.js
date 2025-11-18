@@ -9,23 +9,17 @@ export function openModal(compromisso = null, onSave) {
   const reunioes = getReunioes();
   const responsaveis = getResponsaveis();
 
-  // --- FUNÇÃO AUXILIAR INTELIGENTE ---
-  // Ela garante que o valor atual apareça selecionado, mesmo que não esteja na lista oficial
-  // ou tenha espaços extras.
   const renderOptions = (items, currentValue) => {
     const normalizedCurrent = currentValue ? currentValue.trim() : '';
     
-    // Verifica se o valor atual existe na lista oficial (ignorando espaços)
     const exists = items.some(item => item.name.trim() === normalizedCurrent);
 
     let optionsHtml = '';
 
-    // Se o valor atual existe e NÃO está na lista oficial, adicionamos ele no topo como opção selecionada
     if (currentValue && !exists) {
         optionsHtml += `<option value="${currentValue}" selected>${currentValue}</option>`;
     }
 
-    // Gera o resto da lista
     optionsHtml += items.map(item => {
         const isSelected = item.name.trim() === normalizedCurrent;
         return `<option value="${item.name}" ${isSelected ? 'selected' : ''}>${item.name}</option>`;
@@ -140,7 +134,17 @@ export function openModal(compromisso = null, onSave) {
                 placeholder="Descreva a ação necessária..."
               >${compromisso?.acao || ''}</textarea>
             </div>
-          </div>
+            
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Observação</label>
+              <textarea 
+                name="observacao" 
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                placeholder="Notas adicionais sobre o compromisso..."
+              >${compromisso?.observacao || ''}</textarea>
+            </div>
+            </div>
 
           <div class="flex gap-3 mt-6 pt-6 border-t border-gray-200">
             <button type="button" id="cancel-btn" class="flex-1 btn-secondary justify-center">
@@ -185,6 +189,7 @@ export function openModal(compromisso = null, onSave) {
       acao: formData.get('acao'),
       responsavel: formData.get('responsavel'),
       status: formData.get('status'),
+      observacao: formData.get('observacao'), // NOVO: Captura o valor
     };
 
     if (isEdit) {

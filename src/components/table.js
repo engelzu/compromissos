@@ -1,26 +1,42 @@
 import { getPriorityIcon, getStatusColor, formatDate, getStatusBadge } from '../utils/helpers.js';
 
-// Definimos quantos itens aparecem por página
 const ITEMS_PER_PAGE = 10;
 
-export function renderTable(compromissos, filter, search, currentPage = 1) {
-  // 1. Filtragem (igual estava antes)
+// AGORA ACEITAMOS 3 NOVOS PARÂMETROS NO FINAL: filterStatus, filterResponsavel, filterReuniao
+export function renderTable(compromissos, filterArea, search, currentPage = 1, filterStatus = '', filterResponsavel = '', filterReuniao = '') {
+  
   let filtered = compromissos;
 
-  if (filter !== 'TODOS') {
-    filtered = filtered.filter(c => c.categoria === filter);
+  // 1. Filtro de Área (Sidebar)
+  if (filterArea !== 'TODOS') {
+    filtered = filtered.filter(c => c.categoria === filterArea);
   }
 
+  // 2. Filtro de Busca Geral (Input de Texto)
   if (search) {
+    const s = search.toLowerCase();
     filtered = filtered.filter(c => 
-      (c.nomeReuniao && c.nomeReuniao.toLowerCase().includes(search.toLowerCase())) ||
-      (c.tema && c.tema.toLowerCase().includes(search.toLowerCase())) ||
-      (c.responsavel && c.responsavel.toLowerCase().includes(search.toLowerCase())) ||
-      (c.acao && c.acao.toLowerCase().includes(search.toLowerCase())) ||
-      (c.status && c.status.toLowerCase().includes(search.toLowerCase()))
+      (c.nomeReuniao && c.nomeReuniao.toLowerCase().includes(s)) ||
+      (c.tema && c.tema.toLowerCase().includes(s)) ||
+      (c.responsavel && c.responsavel.toLowerCase().includes(s)) ||
+      (c.acao && c.acao.toLowerCase().includes(s))
     );
   }
 
+  // 3. NOVOS FILTROS ESPECÍFICOS
+  if (filterStatus) {
+      filtered = filtered.filter(c => c.status === filterStatus);
+  }
+
+  if (filterResponsavel) {
+      filtered = filtered.filter(c => c.responsavel === filterResponsavel);
+  }
+
+  if (filterReuniao) {
+      filtered = filtered.filter(c => c.nomeReuniao === filterReuniao);
+  }
+
+  // Caso não tenha resultados
   if (filtered.length === 0) {
     return `
       <div class="bg-white rounded-lg shadow-sm p-12 text-center">
@@ -28,23 +44,19 @@ export function renderTable(compromissos, filter, search, currentPage = 1) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum compromisso encontrado</h3>
-        <p class="text-gray-500">Ajuste os filtros ou adicione um novo registro.</p>
+        <p class="text-gray-500">Tente limpar os filtros.</p>
       </div>
     `;
   }
 
-  // 2. Lógica de Paginação
+  // 4. Paginação
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  // Garante que a página atual não ultrapasse o limite
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
-  
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  
-  // Pega apenas os 10 itens dessa página
   const pagedItems = filtered.slice(startIndex, endIndex);
 
-  // 3. HTML da Tabela + Rodapé de Paginação
+  // 5. Renderização HTML
   return `
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
       <div class="overflow-x-auto hidden md:block">
@@ -119,34 +131,28 @@ export function renderTable(compromissos, filter, search, currentPage = 1) {
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p class="text-sm text-gray-700">
-              Mostrando <span class="font-medium">${startIndex + 1}</span> a <span class="font-medium">${Math.min(endIndex, filtered.length)}</span> de <span class="font-medium">${filtered.length}</span> resultados
+              Mostrando <span class="font-medium">${startIndex + 1}</span> a <span class="font-medium">${Math.min(endIndex, filtered.length)}</span> de <span class="font-medium">${filtered.length}</span>
             </p>
           </div>
           <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button id="btn-prev-page" ${safePage === 1 ? 'disabled' : ''} class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+              <button id="btn-prev-page" ${safePage === 1 ? 'disabled' : ''} class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
                 <span class="sr-only">Anterior</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
               </button>
-              
               <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                ${safePage} <span class="mx-1 text-gray-400">|</span> ${totalPages}
+                ${safePage} / ${totalPages}
               </span>
-
-              <button id="btn-next-page" ${safePage === totalPages ? 'disabled' : ''} class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+              <button id="btn-next-page" ${safePage === totalPages ? 'disabled' : ''} class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
                 <span class="sr-only">Próximo</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
               </button>
             </nav>
           </div>
         </div>
         <div class="flex items-center justify-between w-full sm:hidden">
            <button id="btn-prev-page-mobile" ${safePage === 1 ? 'disabled' : ''} class="btn-secondary text-xs">Anterior</button>
-           <span class="text-sm text-gray-700">${safePage} | ${totalPages}</span>
+           <span class="text-sm text-gray-700">${safePage} / ${totalPages}</span>
            <button id="btn-next-page-mobile" ${safePage === totalPages ? 'disabled' : ''} class="btn-secondary text-xs">Próximo</button>
         </div>
       </div>

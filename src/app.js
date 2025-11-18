@@ -1,5 +1,5 @@
 import { areas } from './data/areas.js';
-import { getCompromissos, deleteCompromisso, initializeData, saveCompromisso } from './services/storage.js'; // ADICIONEI saveCompromisso
+import { getCompromissos, deleteCompromisso, initializeData, saveCompromisso } from './services/storage.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
@@ -47,19 +47,20 @@ function renderApp() {
               <h1 class="text-2xl font-bold text-gray-900">COMPROMISSO</h1>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 
-                <input type="file" id="file-input" accept=".csv" class="hidden" />
+                <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
                 
-                <button id="btn-template" class="btn-secondary text-sm" title="Baixar Modelo para Preencher">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Modelo
+                <button id="btn-template" class="btn-secondary text-sm" title="Baixar Modelo Excel">
+                  <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Modelo XLS
                 </button>
 
-                <button id="btn-import" class="btn-secondary text-sm" title="Importar CSV Preenchido">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                  Importar
+                <button id="btn-import" class="btn-secondary text-sm" title="Importar Planilha Excel">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  Importar XLS
                 </button>
-                <button id="btn-export" class="btn-secondary text-sm">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+
+                <button id="btn-export" class="btn-secondary text-sm" title="Exportar para Excel">
+                  <svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   Exportar
                 </button>
                 
@@ -120,12 +121,11 @@ function setupEventListeners() {
     openModal(null, () => updateTable());
   });
 
-  document.getElementById('btn-export')?.addEventListener('click', exportToCSV);
-  
-  // NOVOS LISTENERS
-  document.getElementById('btn-template')?.addEventListener('click', downloadTemplate);
+  // LISTENERS ATUALIZADOS PARA EXCEL
+  document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
+  document.getElementById('btn-template')?.addEventListener('click', downloadTemplateExcel);
   document.getElementById('btn-import')?.addEventListener('click', triggerImport);
-  document.getElementById('file-input')?.addEventListener('change', processCSV);
+  document.getElementById('file-input')?.addEventListener('change', processExcel); // Mudou para processExcel
 
   
   document.body.addEventListener('click', async function(e) {
@@ -168,119 +168,159 @@ function updateTable() {
   document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
 }
 
-function exportToCSV() {
+// --- FUNÇÕES DE EXCEL ---
+
+// 1. EXPORTAR DADOS PARA EXCEL
+function exportToExcel() {
   const compromissos = getCompromissos();
-  const headers = ['Prioridade', 'Nome da Reunião', 'Data Registro', 'Tema', 'Ação', 'Responsável', 'Data Prazo', 'Área', 'Status'];
-  const rows = compromissos.map(c => [
-    c.prioridade,
-    `"${(c.nomeReuniao || '').replace(/"/g, '""')}"`,
-    formatDate(c.dataRegistro),
-    `"${(c.tema || '').replace(/"/g, '""')}"`,
-    `"${(c.acao || '').replace(/"/g, '""')}"`,
-    `"${(c.responsavel || '').replace(/"/g, '""')}"`,
-    formatDate(c.dataPrazo),
-    `"${(c.categoria || '').replace(/"/g, '""')}"`,
-    `"${(c.status || '').replace(/"/g, '""')}"`
-  ].join(','));
+  
+  // Mapeia os dados para o formato amigável do Excel
+  const dataToExport = compromissos.map(c => ({
+    'Prioridade': c.prioridade,
+    'Nome da Reunião': c.nomeReuniao,
+    'Data Registro': formatDate(c.dataRegistro),
+    'Tema': c.tema,
+    'Ação': c.acao,
+    'Responsável': c.responsavel,
+    'Data Prazo': formatDate(c.dataPrazo),
+    'Área': c.categoria,
+    'Status': c.status
+  }));
 
-  const csvContent = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'compromissos.csv';
-  link.click();
+  // Cria a planilha usando a biblioteca XLSX
+  const ws = XLSX.utils.json_to_sheet(dataToExport);
+  
+  // Ajusta largura das colunas (opcional, mas fica bonito)
+  const wscols = [
+    {wch: 10}, // Prioridade
+    {wch: 30}, // Nome
+    {wch: 15}, // Data Reg
+    {wch: 30}, // Tema
+    {wch: 40}, // Ação
+    {wch: 25}, // Responsável
+    {wch: 15}, // Data Prazo
+    {wch: 15}, // Área
+    {wch: 15}  // Status
+  ];
+  ws['!cols'] = wscols;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Compromissos");
+
+  // Baixa o arquivo
+  XLSX.writeFile(wb, "Compromissos.xlsx");
 }
 
-// NOVA FUNÇÃO: Baixar modelo em branco
-function downloadTemplate() {
-    // Define os cabeçalhos exatos que esperamos na importação
-    const headers = ['Prioridade', 'Nome da Reunião', 'Data Registro (AAAA-MM-DD)', 'Tema', 'Ação', 'Responsável', 'Data Prazo (AAAA-MM-DD)', 'Área', 'Status'];
-    
-    // Exemplo de linha para ajudar o usuário (opcional)
-    const exampleRow = ['1', 'Reunião Diária', '2025-10-20', 'Planejamento', 'Criar pauta', 'João Silva', '2025-10-25', 'TI', 'Em Andamento'];
-    
-    const csvContent = [headers.join(','), exampleRow.join(',')].join('\n');
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'modelo_importacao.csv';
-    link.click();
+// 2. BAIXAR MODELO EM BRANCO (EXCEL)
+function downloadTemplateExcel() {
+  // Cria apenas os cabeçalhos
+  const headers = [
+    {
+      'Prioridade': 1, 
+      'Nome da Reunião': 'Ex: Reunião Diária', 
+      'Data Registro': '2025-11-20', 
+      'Tema': 'Planejamento', 
+      'Ação': 'Verificar pendências', 
+      'Responsável': 'João Silva', 
+      'Data Prazo': '2025-11-25', 
+      'Área': 'TI',
+      'Status': 'Em Andamento'
+    }
+  ];
+
+  const ws = XLSX.utils.json_to_sheet(headers);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Modelo Importação");
+
+  XLSX.writeFile(wb, "Modelo_Compromissos.xlsx");
 }
 
-// NOVA FUNÇÃO: Clicar no input invisível
 function triggerImport() {
     document.getElementById('file-input').click();
 }
 
-// NOVA FUNÇÃO: Processar o arquivo enviado
-async function processCSV(event) {
+// 3. PROCESSAR ARQUIVO EXCEL ENVIADO
+async function processExcel(event) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
+    
     reader.onload = async (e) => {
-        const text = e.target.result;
-        const rows = text.split('\n');
-        
-        // Remove cabeçalho
-        const dataRows = rows.slice(1); 
-        let successCount = 0;
-        let errorCount = 0;
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array', cellDates: true}); // cellDates: true converte datas do Excel para JS Date
 
-        if (confirm(`Encontradas ${dataRows.length} linhas (incluindo possíveis vazias). Deseja importar?`)) {
-             // Mostra loading simples
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Converte para JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length === 0) {
+            alert("A planilha parece estar vazia.");
+            return;
+        }
+
+        if (confirm(`Encontrados ${jsonData.length} registros. Deseja importar?`)) {
             const btnImport = document.getElementById('btn-import');
             const originalText = btnImport.innerHTML;
             btnImport.innerHTML = 'Importando...';
             btnImport.disabled = true;
 
-            for (let row of dataRows) {
-                // Pula linhas vazias
-                if (!row || row.trim() === '') continue;
+            let successCount = 0;
+            let errorCount = 0;
 
-                // Lógica simples para separar por vírgula, respeitando aspas
-                // Regex que separa por virgula mas ignora virgula dentro de aspas
-                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-                
-                // Se o regex falhar ou a linha estiver mal formatada, tenta split simples
-                const columns = cols ? cols.map(c => c.replace(/^"|"$/g, '').trim()) : row.split(',');
-
-                if (columns.length < 5) { // Validação mínima
-                    errorCount++;
-                    continue;
-                }
-
+            for (let row of jsonData) {
                 try {
-                    const novoCompromisso = {
-                        prioridade: parseInt(columns[0]) || 3, // Padrão 3 se falhar
-                        nomeReuniao: columns[1],
-                        dataRegistro: columns[2], // Espera formato AAAA-MM-DD
-                        tema: columns[3],
-                        acao: columns[4],
-                        responsavel: columns[5],
-                        dataPrazo: columns[6],
-                        categoria: columns[7],
-                        status: columns[8] || 'Não Iniciada'
+                    // Função auxiliar para converter Data JS para string YYYY-MM-DD
+                    const safeDate = (val) => {
+                        if (!val) return null;
+                        if (val instanceof Date) return val.toISOString().split('T')[0];
+                        // Se veio como texto dd/mm/aaaa, tenta converter (básico)
+                        if (typeof val === 'string' && val.includes('/')) {
+                            const parts = val.split('/');
+                            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
+                        return val; // Retorna como está se não for data nem texto comum
                     };
+
+                    const novoCompromisso = {
+                        prioridade: parseInt(row['Prioridade']) || 3,
+                        nomeReuniao: row['Nome da Reunião'] || '',
+                        dataRegistro: safeDate(row['Data Registro']) || new Date().toISOString().split('T')[0],
+                        tema: row['Tema'] || '',
+                        acao: row['Ação'] || '',
+                        responsavel: row['Responsável'] || '',
+                        dataPrazo: safeDate(row['Data Prazo']),
+                        categoria: row['Área'] || 'Geral',
+                        status: row['Status'] || 'Não Iniciada'
+                    };
+
+                    // Validação mínima
+                    if (!novoCompromisso.nomeReuniao) {
+                        console.warn('Linha ignorada (sem nome):', row);
+                        errorCount++;
+                        continue;
+                    }
 
                     await saveCompromisso(novoCompromisso);
                     successCount++;
                 } catch (err) {
-                    console.error("Erro na linha:", row, err);
+                    console.error("Erro ao importar linha:", row, err);
                     errorCount++;
                 }
             }
 
-            // Restaura botão e atualiza tabela
             btnImport.innerHTML = originalText;
             btnImport.disabled = false;
-            document.getElementById('file-input').value = ''; // Limpa input para permitir selecionar mesmo arquivo
+            document.getElementById('file-input').value = ''; 
             
             await updateTable();
             alert(`Importação concluída!\nSucesso: ${successCount}\nErros/Ignorados: ${errorCount}`);
         }
     };
-    reader.readAsText(file);
+
+    reader.readAsArrayBuffer(file);
 }
 
 function formatDate(dateString) {

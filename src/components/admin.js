@@ -7,12 +7,22 @@ let reunioes = [];
 let responsaveis = [];
 
 async function fetchAdminData() {
-    const { data: areasData } = await supabase.from('areas').select('*').order('name');
-    areas = areasData || [];
-    const { data: reunioesData } = await supabase.from('reunioes').select('*').order('name');
-    reunioes = reunioesData || [];
-    const { data: responsaveisData } = await supabase.from('responsaveis').select('*').order('name');
-    responsaveis = responsaveisData || [];
+    try {
+        const { data: areasData, error: areasError } = await supabase.from('areas').select('*').order('name');
+        if (areasError) throw areasError;
+        areas = areasData || [];
+
+        const { data: reunioesData, error: reunioesError } = await supabase.from('reunioes').select('*').order('name');
+        if (reunioesError) throw reunioesError;
+        reunioes = reunioesData || [];
+
+        const { data: responsaveisData, error: responsaveisError } = await supabase.from('responsaveis').select('*').order('name');
+        if (responsaveisError) throw responsaveisError;
+        responsaveis = responsaveisData || [];
+    } catch (error) {
+        console.error("Erro ao carregar dados do admin:", error);
+        alert("Erro ao carregar dados: " + error.message);
+    }
 }
 
 function renderManagementTable(tableName, items, columns) {
@@ -115,8 +125,13 @@ function attachEvents() {
         const deleteBtn = e.target.closest('.btn-delete-item');
         if (deleteBtn) {
             if (confirm(`Tem certeza que deseja EXCLUIR este item?`)) {
-                await supabase.from(deleteBtn.dataset.table).delete().eq('id', deleteBtn.dataset.id);
-                renderAdminPage();
+                try {
+                    const { error } = await supabase.from(deleteBtn.dataset.table).delete().eq('id', deleteBtn.dataset.id);
+                    if (error) throw error;
+                    await renderAdminPage();
+                } catch (err) {
+                    alert("Erro ao excluir: " + err.message);
+                }
             }
             return;
         }
@@ -174,10 +189,27 @@ function openItemModal(tableName, item = null, onSave) {
         const formData = new FormData(form);
         const newData = Object.fromEntries(formData.entries());
 
-        if (isEdit) await supabase.from(tableName).update(newData).eq('id', item.id);
-        else await supabase.from(tableName).insert([newData]);
-        
-        closeModal();
-        onSave();
+        const saveBtn = form.querySelector('button[type="submit"]');
+        const originalText = saveBtn.innerText;
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Salvando...";
+
+        try {
+            if (isEdit) {
+                const { error } = await supabase.from(tableName).update(newData).eq('id', item.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from(tableName).insert([newData]);
+                if (error) throw error;
+            }
+            
+            closeModal();
+            await onSave();
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+            alert("Erro ao salvar: " + error.message);
+            saveBtn.disabled = false;
+            saveBtn.innerText = originalText;
+        }
     });
 }

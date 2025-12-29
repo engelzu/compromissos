@@ -4,7 +4,8 @@ import { renderSidebar } from './components/sidebar.js';
 import { renderHeader } from './components/header.js';
 import { renderTable } from './components/table.js';
 import { openModal } from './components/modal.js';
-import { renderAdminPage } from './components/admin.js'; 
+import { renderAdminPage } from './components/admin.js';
+import { renderLogin } from './components/login.js';
 
 let currentFilter = 'TODOS';
 let searchTerm = '';
@@ -20,6 +21,14 @@ let sortDirection = 'desc'; // Ordem padrão: 'desc' (mais novo primeiro)
 
 export async function initApp() {
   const app = document.getElementById('app');
+
+  // VERIFICA SESSÃO
+  const session = localStorage.getItem('user_session');
+  if (!session) {
+    renderLogin(initApp); // Se não logado, renderiza login e passa initApp como callback
+    return;
+  }
+
   app.innerHTML = `
     <div class="min-h-screen flex items-center justify-center bg-gray-50">
       <div class="text-center">
@@ -27,6 +36,7 @@ export async function initApp() {
         <p class="text-lg font-medium text-gray-700">Carregando dados...</p>
       </div>
     </div>`;
+
   await initializeData();
   renderApp();
   setupEventListeners();
@@ -34,7 +44,8 @@ export async function initApp() {
 
 function renderApp() {
   const app = document.getElementById('app');
-  
+  const user = JSON.parse(localStorage.getItem('user_session') || '{}');
+
   const reunioesOpts = getReunioes().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
   const responsaveisOpts = getResponsaveis().map(r => `<option value="${r.name}">${r.name}</option>`).join('');
 
@@ -50,7 +61,10 @@ function renderApp() {
           <div class="p-4 lg:p-6">
             
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <h1 class="text-2xl font-bold text-gray-900">COMPROMISSO</h1>
+              <div>
+                  <h1 class="text-2xl font-bold text-gray-900">COMPROMISSO</h1>
+                  <p class="text-xs text-gray-500">Logado como: ${user.email} | <button id="btn-logout" class="text-red-600 hover:underline">Sair</button></p>
+              </div>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
                 <button id="btn-template" class="btn-secondary text-sm">Modelo XLS 🔒</button>
@@ -97,64 +111,76 @@ function renderApp() {
 }
 
 function checkPassword() {
-    const pass = prompt("Digite a senha de administrador:");
-    if (pass === "789512") return true;
-    alert("Senha incorreta!");
-    return false;
+  const user = JSON.parse(localStorage.getItem('user_session') || '{}');
+  // Se for admin logado como admin, passa direto
+  if (user.role === 'admin') return true;
+
+  // Senão pede senha
+  const pass = prompt("Digite a senha de administrador:");
+  if (pass === "789512") return true;
+  alert("Senha incorreta! Você não tem permissão.");
+  return false;
 }
 
 function setupEventListeners() {
   const sidebar = document.getElementById('sidebar');
   const sidebarOverlay = document.getElementById('sidebar-overlay');
   const sidebarToggle = document.getElementById('sidebar-toggle');
-  
+
   const closeSidebar = () => { sidebar?.classList.add('-translate-x-full'); sidebarOverlay?.classList.add('hidden'); };
   const openSidebar = () => { sidebar?.classList.remove('-translate-x-full'); sidebarOverlay?.classList.remove('hidden'); };
 
-  document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => { 
-      e.preventDefault();
-      if (checkPassword()) renderAdminPage(); 
+  // LOGOUT
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    localStorage.removeItem('user_session');
+    window.location.reload();
+  });
+
+  document.getElementById('btn-admin-panel')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    // Verificação de segurança adicional para o painel admin
+    if (checkPassword()) renderAdminPage();
   });
 
   sidebarToggle?.addEventListener('click', (e) => { e.stopPropagation(); sidebar?.classList.contains('-translate-x-full') ? openSidebar() : closeSidebar(); });
   sidebarOverlay?.addEventListener('click', closeSidebar);
-  
-  document.getElementById('search-input')?.addEventListener('input', (e) => { 
-      searchTerm = e.target.value; 
-      currentPage = 1; 
-      updateTable(); 
+
+  document.getElementById('search-input')?.addEventListener('input', (e) => {
+    searchTerm = e.target.value;
+    currentPage = 1;
+    updateTable();
   });
 
   document.getElementById('filter-status')?.addEventListener('change', (e) => { filterStatus = e.target.value; currentPage = 1; updateTable(); });
   document.getElementById('filter-responsavel')?.addEventListener('change', (e) => { filterResponsavel = e.target.value; currentPage = 1; updateTable(); });
   document.getElementById('filter-reuniao')?.addEventListener('change', (e) => { filterReuniao = e.target.value; currentPage = 1; updateTable(); });
-  
+
   document.getElementById('btn-add')?.addEventListener('click', () => openModal(null, () => updateTable()));
   document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
 
   document.getElementById('btn-template')?.addEventListener('click', () => { if (checkPassword()) downloadTemplateExcel(); });
   document.getElementById('btn-import')?.addEventListener('click', () => { if (checkPassword()) document.getElementById('file-input').click(); });
   document.getElementById('file-input')?.addEventListener('change', processExcelImport);
-  
-  document.body.addEventListener('click', async function(e) {
+
+  document.body.addEventListener('click', async function (e) {
     // Lógica de Ordenação: Clica no cabeçalho da tabela
     const sortBtn = e.target.closest('#sort-dataRegistro');
     if (sortBtn) {
-        if (sortField === 'dataRegistro') {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortField = 'dataRegistro';
-            sortDirection = 'desc';
-        }
-        currentPage = 1;
-        updateTable();
-        return;
+      if (sortField === 'dataRegistro') {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortField = 'dataRegistro';
+        sortDirection = 'desc';
+      }
+      currentPage = 1;
+      updateTable();
+      return;
     }
-    
+
     // Lógica de Paginação
     if (e.target.closest('#btn-next-page') || e.target.closest('#btn-next-page-mobile')) { currentPage++; updateTable(); return; }
     if (e.target.closest('#btn-prev-page') || e.target.closest('#btn-prev-page-mobile')) { if (currentPage > 1) { currentPage--; updateTable(); } return; }
-    
+
     // Lógica de Sidebar
     const sidebarItem = e.target.closest('.sidebar-item');
     if (sidebarItem) {
@@ -163,10 +189,13 @@ function setupEventListeners() {
       if (window.innerWidth < 1024) closeSidebar();
       return;
     }
-    
+
     // Lógica de Edição/Exclusão
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
+      // PERMISSÃO: Qualquer um pode editar? Por enquanto, sim. 
+      // Se quiser restringir depois: if (!checkPassword()) return;
+
       const id = editBtn.dataset.id;
       const compromisso = getCompromissos().find(c => c.id === id);
       openModal(compromisso, () => updateTable());
@@ -174,6 +203,7 @@ function setupEventListeners() {
     }
     const deleteBtn = e.target.closest('.btn-delete');
     if (deleteBtn) {
+      if (!checkPassword()) return; // Só admin deleta
       if (confirm('Excluir este compromisso?')) {
         await deleteCompromisso(deleteBtn.dataset.id);
         updateTable();
@@ -184,17 +214,17 @@ function setupEventListeners() {
 
 function updateTable() {
   const compromissos = getCompromissos();
-  
+
   // --- APLICA A ORDENAÇÃO AQUI ---
   const sortedCompromissos = [...compromissos].sort((a, b) => {
-      const dateA = new Date(a[sortField]);
-      const dateB = new Date(b[sortField]);
-      
-      let comparison = 0;
-      if (dateA > dateB) comparison = 1;
-      else if (dateA < dateB) comparison = -1;
-      
-      return sortDirection === 'desc' ? comparison * -1 : comparison;
+    const dateA = new Date(a[sortField]);
+    const dateB = new Date(b[sortField]);
+
+    let comparison = 0;
+    if (dateA > dateB) comparison = 1;
+    else if (dateA < dateB) comparison = -1;
+
+    return sortDirection === 'desc' ? comparison * -1 : comparison;
   });
 
   // Passamos o array ORDENADO para a tabela junto com os parâmetros de ordenação

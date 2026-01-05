@@ -3,7 +3,7 @@ import { getPriorityIcon, getStatusColor, formatDate, getStatusBadge } from '../
 const ITEMS_PER_PAGE = 10;
 
 export function renderTable(compromissos, filterArea, search, currentPage = 1, filterStatus = '', filterResponsavel = '', filterReuniao = '', sortField = '', sortDirection = 'desc') {
-  
+
   let filtered = compromissos;
 
   const statusTerm = filterStatus.trim().toLowerCase();
@@ -36,7 +36,7 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const pagedItems = filtered.slice(startIndex, endIndex);
-  
+
   // --- NOVO ÍCONE SVG DE ORDENAÇÃO ---
   const sortIconHtml = (field) => {
     if (sortField !== field) return `<svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>`; // Seta para cima e para baixo (neutra)
@@ -66,6 +66,7 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tema</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ação</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Responsável</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Área</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Data Prazo</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Observação</th>
@@ -81,6 +82,7 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
                 <td class="px-4 py-3"><div class="text-sm text-gray-900">${c.tema}</div></td>
                 <td class="px-4 py-3"><div class="text-sm text-gray-600">${c.acao}</div></td>
                 <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm font-medium text-gray-800">${c.responsavel}</div></td>
+                <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-600">${c.categoria || '-'}</div></td>
                 <td class="px-4 py-3 whitespace-nowrap">
                   <div class="flex items-center gap-2">
                     <div class="w-2 h-2 rounded-full ${getStatusColor(c.dataPrazo)}"></div>
@@ -113,6 +115,7 @@ export function renderTable(compromissos, filterArea, search, currentPage = 1, f
                   <p>${getStatusBadge(c.status)}</p>
                 <p><strong class="font-medium text-gray-800">Ação:</strong> ${c.acao}</p>
                 <p><strong class="font-medium text-gray-800">Responsável:</strong> ${c.responsavel}</p>
+                <p><strong class="font-medium text-gray-800">Área:</strong> ${c.categoria || '-'}</p>
                 <p><strong class="font-medium text-gray-800">Observação:</strong> ${c.observacao || '-'}</p>
               </div>
               <div class="flex items-center justify-between text-sm pt-3 border-t border-gray-100 mt-3">

@@ -158,8 +158,9 @@ function setupEventListeners() {
   document.getElementById('btn-add')?.addEventListener('click', () => openModal(null, () => updateTable()));
   document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
 
-  document.getElementById('btn-template')?.addEventListener('click', () => { if (checkPassword()) downloadTemplateExcel(); });
-  document.getElementById('btn-import')?.addEventListener('click', () => { if (checkPassword()) document.getElementById('file-input').click(); });
+
+  document.getElementById('btn-template')?.addEventListener('click', downloadTemplateExcel);
+  document.getElementById('btn-import')?.addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input')?.addEventListener('change', processExcelImport);
 
   document.body.addEventListener('click', async function (e) {
@@ -232,9 +233,94 @@ function updateTable() {
   document.getElementById('sidebar').innerHTML = renderSidebar(areas, currentFilter);
 }
 
-function exportToExcel() { /* ... */ }
-function downloadTemplateExcel() { /* ... */ }
-async function processExcelImport(event) { /* ... */ }
-function formatDate(dateString) { /* ... */ }
+function exportToExcel() {
+  const compromissos = getCompromissos();
+  const data = compromissos.map(c => ({
+    'ID': c.id,
+    'Status': c.status,
+    'Data Registro': formatDate(c.dataRegistro),
+    'Data Prazo': formatDate(c.dataPrazo),
+    'Nome Reunião': c.nomeReuniao,
+    'Tema': c.tema,
+    'Ação': c.acao,
+    'Responsável': c.responsavel,
+    'Categoria': c.categoria,
+    'Prioridade': c.prioridade,
+    'Observação': c.observacao
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Compromissos");
+  XLSX.writeFile(workbook, `Compromissos_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function downloadTemplateExcel() {
+  const headers = [
+    {
+      'Status': 'Não Iniciada',
+      'Data Registro': '2023-01-01',
+      'Data Prazo': '2023-01-15',
+      'Nome Reunião': 'Reunião Exemplo',
+      'Tema': 'Tema Exemplo',
+      'Ação': 'Descrição da Ação',
+      'Responsável': 'João Silva',
+      'Categoria': 'Manutenção',
+      'Prioridade': 'Alta',
+      'Observação': 'Obs'
+    }
+  ];
+
+  const worksheet = XLSX.utils.json_to_sheet(headers);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo");
+  XLSX.writeFile(workbook, "Modelo_Importacao.xlsx");
+}
+
+async function processExcelImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+    const compromissosParaSalvar = jsonData.map(row => ({
+      status: row['Status'] || 'Não Iniciada',
+      dataRegistro: row['Data Registro'] || new Date().toISOString().split('T')[0],
+      dataPrazo: row['Data Prazo'],
+      nomeReuniao: row['Nome Reunião'],
+      tema: row['Tema'],
+      acao: row['Ação'],
+      responsavel: row['Responsável'],
+      categoria: row['Categoria'],
+      prioridade: row['Prioridade'],
+      observacao: row['Observação']
+    }));
+
+    if (confirm(`Deseja importar ${compromissosParaSalvar.length} compromissos?`)) {
+      try {
+        await saveCompromissosBulk(compromissosParaSalvar);
+        alert('Importação concluída com sucesso!');
+        updateTable();
+      } catch (error) {
+        console.error(error);
+        alert('Erro na importação. Verifique o console.');
+      }
+    }
+    // Limpa o input para permitir selecionar o mesmo arquivo novamente se necessário
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  return new Intl.DateTimeFormat('pt-BR').format(date);
+}
 
 export { currentFilter, searchTerm, updateTable };

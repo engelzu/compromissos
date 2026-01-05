@@ -295,6 +295,7 @@ function downloadTemplateExcel() {
     }
     const headers = [
       {
+        'ID': '',
         'Status': 'Não Iniciada',
         'Data Registro': '2023-01-01',
         'Data Prazo': '2023-01-15',
@@ -308,9 +309,9 @@ function downloadTemplateExcel() {
       }
     ];
 
-    const worksheet = XLSX.utils.json_to_sheet(headers);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo");
+    const worksheet = window.XLSX.utils.json_to_sheet(headers);
+    const workbook = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo");
     window.XLSX.writeFile(workbook, "Modelo_Importacao.xlsx");
   } catch (e) {
     console.error("Erro ao baixar modelo:", e);

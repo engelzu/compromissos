@@ -67,8 +67,8 @@ function renderApp() {
               </div>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
-                <button id="btn-template" class="btn-secondary text-sm">Modelo XLS 🔒</button>
-                <button id="btn-import" class="btn-secondary text-sm">Importar XLS 🔒</button>
+                <button id="btn-template" class="btn-secondary text-sm">Modelo XLS</button>
+                <button id="btn-import" class="btn-secondary text-sm">Importar XLS</button>
                 <button id="btn-export" class="btn-secondary text-sm">Exportar</button>
                 <button id="btn-add" class="btn-primary text-sm whitespace-nowrap">+ NOVO REG...</button>
               </div>
@@ -156,11 +156,33 @@ function setupEventListeners() {
   document.getElementById('filter-reuniao')?.addEventListener('change', (e) => { filterReuniao = e.target.value; currentPage = 1; updateTable(); });
 
   document.getElementById('btn-add')?.addEventListener('click', () => openModal(null, () => updateTable()));
-  document.getElementById('btn-export')?.addEventListener('click', exportToExcel);
+  // -- Debug logs adicionados para verificar funcionamento
+  const btnExport = document.getElementById('btn-export');
+  if (btnExport) {
+    btnExport.addEventListener('click', () => {
+      console.log("Botão Exportar clicado");
+      exportToExcel();
+    });
+  } else {
+    console.error("Botão btn-export não encontrado!");
+  }
 
+  const btnTemplate = document.getElementById('btn-template');
+  if (btnTemplate) {
+    btnTemplate.addEventListener('click', () => {
+      console.log("Botão Modelo XLS clicado");
+      downloadTemplateExcel();
+    });
+  }
 
-  document.getElementById('btn-template')?.addEventListener('click', downloadTemplateExcel);
-  document.getElementById('btn-import')?.addEventListener('click', () => document.getElementById('file-input').click());
+  const btnImport = document.getElementById('btn-import');
+  if (btnImport) {
+    btnImport.addEventListener('click', () => {
+      console.log("Botão Importar XLS clicado");
+      document.getElementById('file-input').click();
+    });
+  }
+
   document.getElementById('file-input')?.addEventListener('change', processExcelImport);
 
   document.body.addEventListener('click', async function (e) {
@@ -234,87 +256,115 @@ function updateTable() {
 }
 
 function exportToExcel() {
-  const compromissos = getCompromissos();
-  const data = compromissos.map(c => ({
-    'ID': c.id,
-    'Status': c.status,
-    'Data Registro': formatDate(c.dataRegistro),
-    'Data Prazo': formatDate(c.dataPrazo),
-    'Nome Reunião': c.nomeReuniao,
-    'Tema': c.tema,
-    'Ação': c.acao,
-    'Responsável': c.responsavel,
-    'Categoria': c.categoria,
-    'Prioridade': c.prioridade,
-    'Observação': c.observacao
-  }));
+  try {
+    if (typeof window.XLSX === 'undefined') {
+      alert("Erro: Biblioteca SheetJS não carregada. Verifique sua conexão com a internet.");
+      return;
+    }
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Compromissos");
-  XLSX.writeFile(workbook, `Compromissos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const compromissos = getCompromissos();
+    const data = compromissos.map(c => ({
+      'ID': c.id,
+      'Status': c.status,
+      'Data Registro': formatDate(c.dataRegistro),
+      'Data Prazo': formatDate(c.dataPrazo),
+      'Nome Reunião': c.nomeReuniao,
+      'Tema': c.tema,
+      'Ação': c.acao,
+      'Responsável': c.responsavel,
+      'Categoria': c.categoria,
+      'Prioridade': c.prioridade,
+      'Observação': c.observacao
+    }));
+
+    const worksheet = window.XLSX.utils.json_to_sheet(data);
+    const workbook = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Compromissos");
+    window.XLSX.writeFile(workbook, `Compromissos_${new Date().toISOString().split('T')[0]}.xlsx`);
+  } catch (e) {
+    console.error("Erro ao exportar:", e);
+    alert("Erro ao exportar: " + e.message);
+  }
 }
 
 function downloadTemplateExcel() {
-  const headers = [
-    {
-      'Status': 'Não Iniciada',
-      'Data Registro': '2023-01-01',
-      'Data Prazo': '2023-01-15',
-      'Nome Reunião': 'Reunião Exemplo',
-      'Tema': 'Tema Exemplo',
-      'Ação': 'Descrição da Ação',
-      'Responsável': 'João Silva',
-      'Categoria': 'Manutenção',
-      'Prioridade': 'Alta',
-      'Observação': 'Obs'
+  try {
+    if (typeof window.XLSX === 'undefined') {
+      alert("Erro: Biblioteca SheetJS não carregada.");
+      return;
     }
-  ];
+    const headers = [
+      {
+        'Status': 'Não Iniciada',
+        'Data Registro': '2023-01-01',
+        'Data Prazo': '2023-01-15',
+        'Nome Reunião': 'Reunião Exemplo',
+        'Tema': 'Tema Exemplo',
+        'Ação': 'Descrição da Ação',
+        'Responsável': 'João Silva',
+        'Categoria': 'Manutenção',
+        'Prioridade': 'Alta',
+        'Observação': 'Obs'
+      }
+    ];
 
-  const worksheet = XLSX.utils.json_to_sheet(headers);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo");
-  XLSX.writeFile(workbook, "Modelo_Importacao.xlsx");
+    const worksheet = XLSX.utils.json_to_sheet(headers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo");
+    window.XLSX.writeFile(workbook, "Modelo_Importacao.xlsx");
+  } catch (e) {
+    console.error("Erro ao baixar modelo:", e);
+    alert("Erro ao baixar modelo: " + e.message);
+  }
 }
 
 async function processExcelImport(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-    const compromissosParaSalvar = jsonData.map(row => ({
-      status: row['Status'] || 'Não Iniciada',
-      dataRegistro: row['Data Registro'] || new Date().toISOString().split('T')[0],
-      dataPrazo: row['Data Prazo'],
-      nomeReuniao: row['Nome Reunião'],
-      tema: row['Tema'],
-      acao: row['Ação'],
-      responsavel: row['Responsável'],
-      categoria: row['Categoria'],
-      prioridade: row['Prioridade'],
-      observacao: row['Observação']
-    }));
-
-    if (confirm(`Deseja importar ${compromissosParaSalvar.length} compromissos?`)) {
-      try {
-        await saveCompromissosBulk(compromissosParaSalvar);
-        alert('Importação concluída com sucesso!');
-        updateTable();
-      } catch (error) {
-        console.error(error);
-        alert('Erro na importação. Verifique o console.');
-      }
+  try {
+    if (typeof window.XLSX === 'undefined') {
+      alert("Erro: Biblioteca SheetJS não carregada.");
+      return;
     }
-    // Limpa o input para permitir selecionar o mesmo arquivo novamente se necessário
-    event.target.value = '';
-  };
-  reader.readAsArrayBuffer(file);
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = window.XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = window.XLSX.utils.sheet_to_json(firstSheet);
+
+        const compromissosParaSalvar = jsonData.map(row => ({
+          status: row['Status'] || 'Não Iniciada',
+          dataRegistro: row['Data Registro'] || new Date().toISOString().split('T')[0],
+          dataPrazo: row['Data Prazo'],
+          nomeReuniao: row['Nome Reunião'],
+          tema: row['Tema'],
+          acao: row['Ação'],
+          responsavel: row['Responsável'],
+          categoria: row['Categoria'],
+          prioridade: row['Prioridade'],
+          observacao: row['Observação']
+        }));
+
+        if (confirm(`Deseja importar ${compromissosParaSalvar.length} compromissos?`)) {
+          await saveCompromissosBulk(compromissosParaSalvar);
+          alert('Importação concluída com sucesso!');
+          updateTable();
+        }
+      } catch (innerError) {
+        console.error("Erro ao processar arquivo:", innerError);
+        alert("Erro ao processar arquivo: " + innerError.message);
+      }
+      // Limpa o input para permitir selecionar o mesmo arquivo novamente se necessário
+      event.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  } catch (e) {
+    console.error("Erro ao iniciar importação:", e);
+    alert("Erro na importação: " + e.message);
+  }
 }
 function formatDate(dateString) {
   if (!dateString) return '';

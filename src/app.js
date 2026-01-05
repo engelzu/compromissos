@@ -67,8 +67,8 @@ function renderApp() {
               </div>
               <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-end">
                 <input type="file" id="file-input" accept=".xlsx, .xls" class="hidden" />
-                <button id="btn-template" class="btn-secondary text-sm">Modelo XLS</button>
-                <button id="btn-import" class="btn-secondary text-sm">Importar XLS</button>
+                <button id="btn-template" class="btn-secondary text-sm">Modelo XLS 🔒</button>
+                <button id="btn-import" class="btn-secondary text-sm">Importar XLS 🔒</button>
                 <button id="btn-export" class="btn-secondary text-sm">Exportar</button>
                 <button id="btn-add" class="btn-primary text-sm whitespace-nowrap">+ NOVO REG...</button>
               </div>
@@ -171,7 +171,9 @@ function setupEventListeners() {
   if (btnTemplate) {
     btnTemplate.addEventListener('click', () => {
       console.log("Botão Modelo XLS clicado");
-      downloadTemplateExcel();
+      if (checkPassword()) {
+        downloadTemplateExcel();
+      }
     });
   }
 
@@ -179,7 +181,9 @@ function setupEventListeners() {
   if (btnImport) {
     btnImport.addEventListener('click', () => {
       console.log("Botão Importar XLS clicado");
-      document.getElementById('file-input').click();
+      if (checkPassword()) {
+        document.getElementById('file-input').click();
+      }
     });
   }
 

@@ -272,7 +272,7 @@ function exportToExcel() {
       'Tema': c.tema,
       'Ação': c.acao,
       'Responsável': c.responsavel,
-      'Categoria': c.categoria,
+      'Área': c.categoria,
       'Prioridade': c.prioridade,
       'Observação': c.observacao
     }));
@@ -302,7 +302,7 @@ function downloadTemplateExcel() {
         'Tema': 'Tema Exemplo',
         'Ação': 'Descrição da Ação',
         'Responsável': 'João Silva',
-        'Categoria': 'Manutenção',
+        'Área': 'Manutenção',
         'Prioridade': 'Alta',
         'Observação': 'Obs'
       }
@@ -343,7 +343,7 @@ async function processExcelImport(event) {
           tema: row['Tema'],
           acao: row['Ação'],
           responsavel: row['Responsável'],
-          categoria: row['Categoria'],
+          categoria: row['Área'] || row['Categoria'],
           prioridade: row['Prioridade'],
           observacao: row['Observação']
         }));

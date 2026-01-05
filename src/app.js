@@ -340,37 +340,46 @@ async function processExcelImport(event) {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = window.XLSX.utils.sheet_to_json(firstSheet);
 
-        const compromissosParaSalvar = jsonData.map(row => {
+        const compromissosParaSalvar = jsonData.reduce((acc, row) => {
           // Helper para converter data Excel (serial ou texto)
           const parseExcelDate = (val) => {
             if (!val) return null;
             if (typeof val === 'number') {
-              // Se window.XLSX.SSF estiver disponível (parte do SheetJS)
               if (window.XLSX && window.XLSX.SSF) {
                 try {
                   const d = window.XLSX.SSF.parse_date_code(val);
                   if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
                 } catch (e) { console.error("Erro parse SSF", e); }
               }
-              // Fallback manual aproximado se falhar: (val - 25569) * 86400 * 1000
               return new Date((val - 25569) * 86400 * 1000).toISOString().split('T')[0];
             }
-            return val; // Assume string YYYY-MM-DD ou DD/MM/YYYY válida
+            return val;
           };
 
-          return {
+          const dataPrazoValidada = parseExcelDate(row['Data Prazo']);
+          const responsavelValidado = row['Responsável'];
+          const acaoValidada = row['Ação'];
+
+          // Validação de campos obrigatórios
+          if (!dataPrazoValidada || !responsavelValidado || !acaoValidada) {
+            console.warn("Linha ignorada por falta de campos obrigatórios (Prazo, Responsável ou Ação):", row);
+            return acc;
+          }
+
+          acc.push({
             status: row['Status'] || 'Não Iniciada',
             dataRegistro: parseExcelDate(row['Data Registro']) || new Date().toISOString().split('T')[0],
-            dataPrazo: parseExcelDate(row['Data Prazo']),
+            dataPrazo: dataPrazoValidada,
             nomeReuniao: row['Nome Reunião'],
             tema: row['Tema'],
-            acao: row['Ação'],
-            responsavel: row['Responsável'],
+            acao: acaoValidada,
+            responsavel: responsavelValidado,
             categoria: row['Área'] || row['Categoria'],
             prioridade: row['Prioridade'],
             observacao: row['Observação']
-          };
-        });
+          });
+          return acc;
+        }, []);
 
         if (confirm(`Deseja importar ${compromissosParaSalvar.length} compromissos?`)) {
           await saveCompromissosBulk(compromissosParaSalvar);

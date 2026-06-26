@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Compromissos</title>
+  <meta name="description" content="Sistema completo de gerenciamento de compromissos e reuniões" />
+  <meta name="author" content="Dualite Alpha" />
+  <meta property="og:title" content="Sistema de Compromissos" />
+  <meta property="og:description" content="Sistema completo de gerenciamento de compromissos e reuniões" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://d33wubrfki0l68.cloudfront.net/68f243dc3221b3380e28c466/screenshot_2025-10-17-13-26-56-0000.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sistema de Compromissos" />
+  <meta name="twitter:description" content="Sistema completo de gerenciamento de compromissos e reuniões" />
+  <meta name="twitter:site" content="@dualitedev" />
+  <meta name="twitter:image" content="https://d33wubrfki0l68.cloudfront.net/68f243dc3221b3380e28c466/screenshot_2025-10-17-13-26-56-0000.webp" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://i.ibb.co/HLfD5wgf/dualite-favicon.png" />
+  <link rel="canonical" href="https://de-compromissos-t9k9-dualite.netlify.app" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script type="module" crossorigin src="/assets/index-C7ZOYULb.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DkP3uRFv.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Sistema de Compromissos",
+    "url": "https://de-compromissos-t9k9-dualite.netlify.app",
+    "description": "Sistema completo de gerenciamento de compromissos e reuniões",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Dualite Alpha"
+    }
+  }
+  </script>
+  <style>
+    #btn-admin-panel,
+    button#btn-admin-panel + button {
+      display: none !important;
+    }
+    .top-actions-container {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .manual-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: #16a34a;
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      transition: all 0.2s ease-in-out;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      height: 38px;
+      box-sizing: border-box;
+    }
+    .manual-btn:hover {
+      background-color: #15803d;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+    .manual-btn:active {
+      transform: translateY(0);
+    }
+    .manual-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #ffffff;
+      color: #4b5563;
+      border: 1px solid #d1d5db;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      transition: all 0.2s ease-in-out;
+    }
+    .info-btn:hover {
+      background-color: #f3f4f6;
+      color: #111827;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+    .info-btn:active {
+      transform: translateY(0);
+    }
+    .info-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+    @media (max-width: 640px) {
+      .top-actions-container {
+        top: 10px;
+        right: 10px;
+        gap: 6px;
+      }
+      .manual-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        height: 32px;
+      }
+      .info-btn {
+        width: 32px;
+        height: 32px;
+      }
+      .info-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+
+    /* Custom Admin Modal Styles */
+    .admin-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: adminFadeIn 0.2s ease-out forwards;
+    }
+    .admin-modal-overlay.closing {
+      animation: adminFadeOut 0.2s ease-in forwards;
+    }
+    .admin-modal-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transform: scale(0.95);
+      animation: adminScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .admin-modal-overlay.closing .admin-modal-card {
+      animation: adminScaleOut 0.2s ease-in forwards;
+    }
+    .admin-modal-header h3 {
+      margin: 0 0 8px 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .admin-modal-header p {
+      margin: 0 0 20px 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    .admin-modal-body {
+      margin-bottom: 24px;
+    }
+    #admin-password-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 16px;
+      outline: none;
+      transition: all 0.2s ease-in-out;
+      box-sizing: border-box;
+    }
+    #admin-password-input:focus {
+      border-color: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+    }
+    .admin-modal-error {
+      color: #dc2626;
+      font-size: 13px;
+      margin-top: 8px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .admin-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .admin-btn-primary {
+      background-color: #16a34a;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-btn-primary:hover {
+      background-color: #15803d;
+    }
+    .admin-btn-secondary {
+      background-color: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-btn-secondary:hover {
+      background-color: #e5e7eb;
+      color: #1f2937;
+    }
+
+    /* Dashboard Modal Styles */
+    .dash-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: adminFadeIn 0.2s ease-out forwards;
+    }
+    .dash-modal-overlay.closing {
+      animation: adminFadeOut 0.2s ease-in forwards;
+    }
+    .dash-modal-card {
+      background-color: #ffffff;
+      border-radius: 16px;
+      width: 95%;
+      max-width: 1200px;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 32px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transform: scale(0.97);
+      animation: adminScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-sizing: border-box;
+    }
+    .dash-modal-overlay.closing .dash-modal-card {
+      animation: adminScaleOut 0.2s ease-in forwards;
+    }
+    .dash-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 16px;
+    }
+    .dash-modal-header h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .dash-close-btn {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dash-close-btn:hover {
+      background-color: #f3f4f6;
+      color: #4b5563;
+    }
+    .dash-filters {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background-color: #f9fafb;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #f3f4f6;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .dash-filters label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .dash-select {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+      background-color: #ffffff;
+      outline: none;
+      min-width: 200px;
+    }
+    .dash-select:focus {
+      border-color: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+    }
+    
+    /* Stats Grid */
+    .dash-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .dash-stat-card {
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .dash-stat-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dash-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+    }
+    
+    /* Card specific accent colors */
+    .dash-stat-card.total { border-left: 4px solid #3b82f6; }
+    .dash-stat-card.todo { border-left: 4px solid #9ca3af; }
+    .dash-stat-card.doing { border-left: 4px solid #f97316; }
+    .dash-stat-card.done { border-left: 4px solid #16a34a; }
+    .dash-stat-card.overdue { border-left: 4px solid #ef4444; }
+    .dash-stat-card.overdue .dash-stat-value { color: #dc2626; }
+    .dash-stat-card.done .dash-stat-value { color: #16a34a; }
+    .dash-stat-card.doing .dash-stat-value { color: #ea580c; }
+
+    /* Breakdown Section */
+    .dash-sections-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .dash-section-card {
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .dash-section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1f2937;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 10px;
+      margin: 0;
+    }
+    .dash-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .dash-list-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .dash-item-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 500;
+      color: #4b5563;
+    }
+    .dash-item-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dash-item-count {
+      font-weight: 700;
+      color: #111827;
+    }
+    .dash-progress-bg {
+      background-color: #f3f4f6;
+      height: 6px;
+      border-radius: 3px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .dash-progress-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease-out;
+    }
+
+    @keyframes adminFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes adminFadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes adminScaleIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    @keyframes adminScaleOut {
+      from { transform: scale(1); opacity: 1; }
+      to { transform: scale(0.95); opacity: 0; }
+    }
+    @keyframes errorShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+    .error-shake {
+      animation: errorShake 0.2s ease-in-out 2;
+      border-color: #dc2626 !important;
+    }
+  </style>
+</head>
+<body class="antialiased">
+  <div id="app"></div>
+  
+  <div class="top-actions-container">
+    <button id="btn-info" class="info-btn" title="Idealizadores & Desenvolvedor">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 111.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"></path>
+      </svg>
+    </button>
+    <a href="/Manual_Usuario_Compromissos_V2.pdf" target="_blank" class="manual-btn">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+      </svg>
+      MANUAL
+    </a>
+  </div>
+
+  <script>
+    (function() {
+      // Load Supabase dynamically if not already present
+      if (typeof supabase === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        document.head.appendChild(script);
+      }
+
+      const supabaseClient = {
+        client: null,
+        get() {
+          if (!this.client && typeof supabase !== 'undefined') {
+            this.client = supabase.createClient(
+              "https://tvemlvnqbzmdugrjkqtt.supabase.co", 
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZW1sdm5xYnptZHVncmprcXR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Njk0NTIsImV4cCI6MjA3NjI0NTQ1Mn0.EXRSIB7UjN5M-GcGffuq_MYwH-CQQ-L4sEv-LiVMNdU"
+            );
+          }
+          return this.client;
+        }
+      };
+
+      function initAdminInterceptor() {
+        const checkInterval = setInterval(() => {
+          // Check for Admin button
+          const btn = document.getElementById('btn-admin-login');
+          if (btn && !btn.dataset.intercepted) {
+            btn.dataset.intercepted = "true";
+            
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              showAdminModal();
+            });
+          }
+
+          // Check for XLS button to insert Dashboard button next to it
+          const xlsBtn = document.getElementById('btn-template');
+          if (xlsBtn && !document.getElementById('btn-dashboard')) {
+            const dashBtn = document.createElement('button');
+            dashBtn.id = 'btn-dashboard';
+            dashBtn.className = 'btn-secondary text-sm flex items-center gap-1';
+            dashBtn.innerHTML = `
+              <svg style="width: 16px; height: 16px; fill: none; stroke: #16a34a; stroke-width: 2;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+              </svg>
+              DASHBOARD
+            `;
+            xlsBtn.parentNode.insertBefore(dashBtn, xlsBtn);
+            dashBtn.addEventListener('click', showDashboardModal);
+          }
+
+          // Check for Export button
+          const exportBtn = document.getElementById('btn-export');
+          if (exportBtn && !exportBtn.dataset.intercepted) {
+            exportBtn.dataset.intercepted = "true";
+            
+            const newExportBtn = exportBtn.cloneNode(true);
+            exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+            
+            newExportBtn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              await exportEntireDatabase(newExportBtn);
+            });
+          }
+        }, 500);
+      }
+
+      async function exportEntireDatabase(btn) {
+        try {
+          if (typeof window.XLSX === 'undefined') {
+            alert("Erro: Biblioteca SheetJS não carregada. Verifique sua conexão com a internet.");
+            return;
+          }
+          
+          const client = supabaseClient.get();
+          if (!client) {
+            alert("Erro: Supabase não inicializado.");
+            return;
+          }
+
+          const originalText = btn.textContent;
+          btn.textContent = "Exportando...";
+          btn.disabled = true;
+
+          let allData = [];
+          let page = 0;
+          const pageSize = 1000;
+          
+          while (true) {
+            const { data, error } = await client
+              .from("compromissos")
+              .select("*")
+              .order("created_at", { ascending: false })
+              .range(page * pageSize, (page + 1) * pageSize - 1);
+              
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            
+            allData = allData.concat(data);
+            if (data.length < pageSize) break;
+            page++;
+          }
+
+          function formatDateHelper(dateStr) {
+            if (!dateStr) return "";
+            const parts = dateStr.split("-");
+            return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+          }
+
+          const rows = allData.map(n => ({
+            ID: n.id,
+            Status: n.status || 'Não Iniciada',
+            "Data Registro": formatDateHelper(n.data_registro),
+            "Data Prazo": formatDateHelper(n.data_prazo),
+            "Nome Reunião": n.nome_reuniao || '',
+            Tema: n.tema || '',
+            Ação: n.acao || '',
+            Responsável: n.responsavel || '',
+            Área: n.categoria || '',
+            Prioridade: n.prioridade || '',
+            Observação: n.observacao || ''
+          }));
+
+           const worksheet = window.XLSX.utils.json_to_sheet(rows);
+           const workbook = window.XLSX.utils.book_new();
+           window.XLSX.utils.book_append_sheet(workbook, worksheet, "Compromissos");
+           
+           const wbout = window.XLSX.write(workbook, { bookType: 'xlsx', type: 'binary' });
+           function s2ab(s) {
+             const buf = new ArrayBuffer(s.length);
+             const view = new Uint8Array(buf);
+             for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+             return buf;
+           }
+           const blob = new Blob([s2ab(wbout)], { type: "application/octet-stream" });
+           const url = URL.createObjectURL(blob);
+           const a = document.createElement("a");
+           a.href = url;
+           a.download = `Compromissos_Completo_${new Date().toISOString().split("T")[0]}.xlsx`;
+           document.body.appendChild(a);
+           a.click();
+           setTimeout(() => {
+             document.body.removeChild(a);
+             window.URL.revokeObjectURL(url);
+           }, 0);
+
+          btn.textContent = originalText;
+          btn.disabled = false;
+        } catch (error) {
+          console.error("Erro ao exportar banco de dados:", error);
+          alert("Erro ao exportar: " + error.message);
+          btn.textContent = "Exportar";
+          btn.disabled = false;
+        }
+      }
+
+      function showAdminModal() {
+        if (document.getElementById('admin-password-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'admin-password-modal';
+        modal.className = 'admin-modal-overlay';
+        modal.innerHTML = `
+          <div class="admin-modal-card">
+            <div class="admin-modal-header">
+              <h3>Acesso Administrativo</h3>
+              <p>Digite a senha master para acessar as configurações e gerenciar compromissos.</p>
+            </div>
+            <div class="admin-modal-body">
+              <input type="password" id="admin-password-input" placeholder="Digite a senha..." autofocus />
+              <div id="admin-modal-error" class="admin-modal-error" style="display: none;"></div>
+            </div>
+            <div class="admin-modal-footer">
+              <button id="admin-modal-cancel" class="admin-btn-secondary">Cancelar</button>
+              <button id="admin-modal-confirm" class="admin-btn-primary">Entrar</button>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const input = document.getElementById('admin-password-input');
+        const errorDiv = document.getElementById('admin-modal-error');
+        const cancelBtn = document.getElementById('admin-modal-cancel');
+        const confirmBtn = document.getElementById('admin-modal-confirm');
+
+        function closeModal() {
+          modal.classList.add('closing');
+          setTimeout(() => {
+            modal.remove();
+          }, 200);
+        }
+
+        function handleLogin() {
+          const password = input.value.trim();
+          if (password === '789512') {
+            const user = {
+              email: "admin@sistema.com",
+              role: "admin",
+              name: "Administrador"
+            };
+            localStorage.setItem("user_session", JSON.stringify(user));
+            closeModal();
+            window.location.reload();
+          } else {
+            errorDiv.textContent = 'Senha incorreta. Tente novamente.';
+            errorDiv.style.display = 'block';
+            input.classList.add('error-shake');
+            setTimeout(() => input.classList.remove('error-shake'), 500);
+          }
+        }
+
+        cancelBtn.addEventListener('click', closeModal);
+        confirmBtn.addEventListener('click', handleLogin);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            handleLogin();
+          } else if (e.key === 'Escape') {
+            closeModal();
+          }
+        });
+
+        setTimeout(() => input.focus(), 50);
+      }
+
+      async function showDashboardModal() {
+        if (document.getElementById('dashboard-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'dashboard-modal';
+        modal.className = 'dash-modal-overlay';
+        modal.innerHTML = `
+          <div class="dash-modal-card">
+            <div class="dash-modal-header">
+              <h2>
+                <svg style="width: 24px; height: 24px; fill: none; stroke: #16a34a; stroke-width: 2.5;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+                </svg>
+                Painel de Indicadores
+              </h2>
+              <button id="dash-modal-close" class="dash-close-btn">
+                <svg style="width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <div id="dash-modal-content" style="display: flex; flex-direction: column; gap: 20px; text-align: center; padding: 40px 0; font-family: ui-sans-serif, system-ui, sans-serif;">
+              <p style="font-size: 16px; color: #4b5563; font-weight: 500;">Carregando estatísticas do servidor...</p>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeBtn = document.getElementById('dash-modal-close');
+        function closeModal() {
+          modal.classList.add('closing');
+          setTimeout(() => modal.remove(), 200);
+        }
+        closeBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeModal();
+        });
+
+        try {
+          const client = supabaseClient.get();
+          if (!client) throw new Error("Supabase SDK not loaded yet.");
+          
+          const { data: compromissos, error: errC } = await client.from("compromissos").select("*");
+          const { data: areas, error: errA } = await client.from("areas").select("*");
+          const { data: responsaveis, error: errR } = await client.from("responsaveis").select("*").order("name");
+          const { data: reunioes, error: errM } = await client.from("reunioes").select("*").order("name");
+
+          if (errC) throw errC;
+
+          const contentDiv = document.getElementById('dash-modal-content');
+          contentDiv.style.padding = '0';
+          contentDiv.style.textAlign = 'left';
+          
+          renderDashboardContent(contentDiv, compromissos || [], areas || [], responsaveis || [], reunioes || []);
+        } catch (error) {
+          console.error("Erro ao carregar dados do dash:", error);
+          document.getElementById('dash-modal-content').innerHTML = `
+            <p style="color: #dc2626; font-size: 15px; font-weight: 600;">Falha ao carregar os dados. Verifique a conexão com o Supabase.</p>
+          `;
+        }
+      }
+
+      function renderDashboardContent(container, data, areas, responsaveis, reunioes) {
+        const areaOptions = areas.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+        const respOptions = responsaveis.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+        const meetOptions = reunioes.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+        
+        container.innerHTML = `
+          <div class="dash-filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; align-items: end; background-color: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #f3f4f6; font-family: ui-sans-serif, system-ui, sans-serif;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="dash-area-filter" style="font-weight: 600; font-size: 13px; color: #4b5563;">Área</label>
+              <select id="dash-area-filter" class="dash-select" style="width: 100%; box-sizing: border-box;">
+                <option value="TODOS">Todas as Áreas</option>
+                ${areaOptions}
+              </select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="dash-resp-filter" style="font-weight: 600; font-size: 13px; color: #4b5563;">Responsável</label>
+              <select id="dash-resp-filter" class="dash-select" style="width: 100%; box-sizing: border-box;">
+                <option value="TODOS">Todos os Responsáveis</option>
+                ${respOptions}
+              </select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="dash-meet-filter" style="font-weight: 600; font-size: 13px; color: #4b5563;">Tipo de Reunião</label>
+              <select id="dash-meet-filter" class="dash-select" style="width: 100%; box-sizing: border-box;">
+                <option value="TODOS">Todos os Tipos de Reunião</option>
+                ${meetOptions}
+              </select>
+            </div>
+          </div>
+
+          <div class="dash-stats-grid">
+            <div class="dash-stat-card total">
+              <span class="dash-stat-title">Total</span>
+              <span class="dash-stat-value" id="stat-total">0</span>
+            </div>
+            <div class="dash-stat-card done">
+              <span class="dash-stat-title">Concluídas</span>
+              <span class="dash-stat-value" id="stat-done">0</span>
+            </div>
+            <div class="dash-stat-card doing">
+              <span class="dash-stat-title">Em Andamento</span>
+              <span class="dash-stat-value" id="stat-doing">0</span>
+            </div>
+            <div class="dash-stat-card todo">
+              <span class="dash-stat-title">Não Iniciadas</span>
+              <span class="dash-stat-value" id="stat-todo">0</span>
+            </div>
+            <div class="dash-stat-card overdue">
+              <span class="dash-stat-title">Atrasadas</span>
+              <span class="dash-stat-value" id="stat-overdue">0</span>
+            </div>
+          </div>
+
+          <div class="dash-sections-grid">
+            <div class="dash-section-card">
+              <h3 class="dash-section-title">Quantidade por Responsável</h3>
+              <div class="dash-list" id="dash-responsibles-list"></div>
+            </div>
+            <div class="dash-section-card">
+              <h3 class="dash-section-title">Quantidade por Reunião</h3>
+              <div class="dash-list" id="dash-meetings-list"></div>
+            </div>
+          </div>
+        `;
+
+        const areaFilter = document.getElementById('dash-area-filter');
+        const respFilter = document.getElementById('dash-resp-filter');
+        const meetFilter = document.getElementById('dash-meet-filter');
+        
+        function updateStats() {
+          const selectedArea = areaFilter.value;
+          const selectedResp = respFilter.value;
+          const selectedMeet = meetFilter.value;
+          
+          let filtered = data;
+          if (selectedArea !== 'TODOS') {
+            filtered = filtered.filter(c => c.categoria === selectedArea);
+          }
+          if (selectedResp !== 'TODOS') {
+            filtered = filtered.filter(c => c.responsavel === selectedResp);
+          }
+          if (selectedMeet !== 'TODOS') {
+            filtered = filtered.filter(c => c.nome_reuniao === selectedMeet);
+          }
+            
+          const total = filtered.length;
+          
+          const done = filtered.filter(c => c.status === 'Concluída').length;
+          const doing = filtered.filter(c => c.status === 'Em Andamento').length;
+          const todo = filtered.filter(c => c.status === 'Não Iniciada').length;
+          
+          const todayStr = new Date().toISOString().split('T')[0];
+          const overdue = filtered.filter(c => {
+            if (c.status === 'Concluída') return false;
+            if (!c.data_prazo) return false;
+            return c.data_prazo < todayStr;
+          }).length;
+
+          document.getElementById('stat-total').textContent = total;
+          document.getElementById('stat-done').textContent = done;
+          document.getElementById('stat-doing').textContent = doing;
+          document.getElementById('stat-todo').textContent = todo;
+          document.getElementById('stat-overdue').textContent = overdue;
+
+          // Responsibles Breakdown
+          const respMap = {};
+          filtered.forEach(c => {
+            const r = c.responsavel || 'Não Definido';
+            respMap[r] = (respMap[r] || 0) + 1;
+          });
+          const sortedResp = Object.entries(respMap).sort((a, b) => b[1] - a[1]);
+          const maxRespCount = sortedResp.length > 0 ? sortedResp[0][1] : 1;
+          
+          const respListDiv = document.getElementById('dash-responsibles-list');
+          if (sortedResp.length === 0) {
+            respListDiv.innerHTML = '<p style="font-size: 13px; color: #9ca3af; text-align: center; margin-top: 20px;">Nenhum registro encontrado</p>';
+          } else {
+            respListDiv.innerHTML = sortedResp.map(([name, count]) => {
+              const pct = (count / maxRespCount) * 100;
+              return `
+                <div class="dash-list-item">
+                  <div class="dash-item-info">
+                    <span class="dash-item-name">${name}</span>
+                    <span class="dash-item-count">${count}</span>
+                  </div>
+                  <div class="dash-progress-bg">
+                    <div class="dash-progress-bar" style="width: ${pct}%; background-color: #10b981;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+
+          // Meetings Breakdown
+          const meetMap = {};
+          filtered.forEach(c => {
+            const m = c.nome_reuniao || 'Sem Reunião';
+            meetMap[m] = (meetMap[m] || 0) + 1;
+          });
+          const sortedMeet = Object.entries(meetMap).sort((a, b) => b[1] - a[1]);
+          const maxMeetCount = sortedMeet.length > 0 ? sortedMeet[0][1] : 1;
+
+          const meetListDiv = document.getElementById('dash-meetings-list');
+          if (sortedMeet.length === 0) {
+            meetListDiv.innerHTML = '<p style="font-size: 13px; color: #9ca3af; text-align: center; margin-top: 20px;">Nenhum registro encontrado</p>';
+          } else {
+            meetListDiv.innerHTML = sortedMeet.map(([name, count]) => {
+              const pct = (count / maxMeetCount) * 100;
+              return `
+                <div class="dash-list-item">
+                  <div class="dash-item-info">
+                    <span class="dash-item-name">${name}</span>
+                    <span class="dash-item-count">${count}</span>
+                  </div>
+                  <div class="dash-progress-bg">
+                    <div class="dash-progress-bar" style="width: ${pct}%; background-color: #3b82f6;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+
+        areaFilter.addEventListener('change', updateStats);
+        respFilter.addEventListener('change', updateStats);
+        meetFilter.addEventListener('change', updateStats);
+        updateStats();
+      }
+
+      function initInfoButton() {
+        const infoBtn = document.getElementById('btn-info');
+        if (infoBtn) {
+          infoBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showInfoModal();
+          });
+        }
+      }
+
+      function showInfoModal() {
+        if (document.getElementById('info-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'info-modal';
+        modal.className = 'admin-modal-overlay';
+        modal.innerHTML = `
+          <div class="admin-modal-card" style="max-width: 420px; text-align: center; display: flex; flex-direction: column; gap: 16px;">
+            <div class="admin-modal-header" style="border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; margin-bottom: 8px;">
+              <h3 style="margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 18px; font-weight: 700; color: #111827;">Sobre o Sistema</h3>
+            </div>
+            <div class="admin-modal-body" style="font-family: ui-sans-serif, system-ui, sans-serif; text-align: left; display: flex; flex-direction: column; gap: 16px; margin: 0;">
+              <div>
+                <span style="font-weight: 600; color: #4b5563; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Idealizadores</span>
+                <span style="font-size: 15px; font-weight: 600; color: #111827;">Sabrina Nogueira / Tais Ceccagno</span>
+              </div>
+              <div style="border-top: 1px solid #f3f4f6; padding-top: 14px;">
+                <span style="font-weight: 600; color: #4b5563; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Desenvolvedor</span>
+                <span style="font-size: 15px; font-weight: 600; color: #111827; display: block; margin-bottom: 6px;">Luciano Engel</span>
+                <a href="https://wa.me/5551997403703" target="_blank" style="font-size: 14px; color: #16a34a; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background-color: #f0fdf4; padding: 6px 12px; border-radius: 6px; border: 1px solid #dcfce7; width: fit-content; transition: background-color 0.2s;">
+                  <svg style="width: 16px; height: 16px; fill: currentColor;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.458L0 24zm6.246-3.79c1.657.983 3.266 1.488 4.908 1.492 5.485.001 9.948-4.469 9.95-9.953.003-2.657-1.012-5.154-2.861-7.006-1.85-1.851-4.35-2.866-7.009-2.867-5.49 0-9.96 4.47-9.962 9.956-.002 1.834.502 3.626 1.47 5.201l-1.026 3.743 3.843-1.007c1.52.88 3.2 1.344 4.587 1.344zm8.687-6.195c-.299-.149-1.768-.873-2.042-.973-.275-.101-.475-.149-.675.15-.2.299-.774.973-.949 1.173-.175.201-.35.226-.649.076-.299-.15-1.264-.466-2.408-1.487-.89-.794-1.49-1.774-1.665-2.073-.175-.299-.019-.461.13-.61.135-.133.3-.349.449-.524.15-.175.2-.299.3-.5.1-.2.05-.374-.025-.524-.075-.15-.675-1.625-.925-2.224-.244-.589-.493-.51-.675-.519-.174-.009-.373-.01-.573-.01-.2 0-.524.075-.798.374-.275.299-1.05 1.024-1.05 2.5 0 1.475 1.075 2.899 1.225 3.1.15.2 2.11 3.224 5.116 4.526.715.31 1.273.496 1.71.635.717.228 1.37.196 1.885.119.574-.087 1.768-.724 2.018-1.424.25-.7.25-1.299.175-1.424-.075-.125-.275-.2-.574-.35z"/>
+                  </svg>
+                  (51) 99740-3703
+                </a>
+              </div>
+            </div>
+            <div class="admin-modal-footer" style="margin-top: 10px;">
+              <button id="info-modal-close" class="admin-btn-primary" style="width: 100%;">Fechar</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeBtn = document.getElementById('info-modal-close');
+        function closeModal() {
+          modal.classList.add('closing');
+          setTimeout(() => modal.remove(), 200);
+        }
+        closeBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeModal();
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          initAdminInterceptor();
+          initInfoButton();
+        });
+      } else {
+        initAdminInterceptor();
+        initInfoButton();
+      }
+    })();
+  </script>
+</body>
+</html>
